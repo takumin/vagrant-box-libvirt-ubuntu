@@ -574,6 +574,19 @@ __EOF__
 chroot "${WORK_DIR}" systemctl enable ssh-keygen.service
 
 ################################################################################
+# Boot
+################################################################################
+
+# Grub Boot Loader
+chroot "${WORK_DIR}" apt-get -y install grub-pc-bin grub-efi-amd64-bin
+
+# Minimal Timeout
+sed -i -e 's@^GRUB_TIMEOUT=.*$@GRUB_TIMEOUT=0@' "${WORK_DIR}/etc/default/grub"
+
+# Default Text Console
+sed -i -e 's@^GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"$@GRUB_CMDLINE_LINUX_DEFAULT="quiet"@' "${WORK_DIR}/etc/default/grub"
+
+################################################################################
 # Initramfs
 ################################################################################
 
@@ -623,7 +636,9 @@ mount -t tmpfs                      tmpfs    "${GRUB_DIR}/var/tmp"
 chmod 1777 "${GRUB_DIR}/dev/shm"
 
 # Install Boot Recode
-chroot "${GRUB_DIR}" grub-install --target=i386-pc "${BLOCK_DEV}"
+chroot "${GRUB_DIR}" grub-install --target=i386-pc --recheck "${BLOCK_DEV}"
+chroot "${GRUB_DIR}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --recheck
+chroot "${GRUB_DIR}" grub-mkconfig -o /boot/grub/grub.cfg
 
 # Unmount Partition
 awk '{print $2}' /proc/mounts | grep -s "${WORK_DIR}" | sort -r | xargs --no-run-if-empty umount
