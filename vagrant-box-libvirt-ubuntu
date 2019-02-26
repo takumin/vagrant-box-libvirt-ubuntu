@@ -343,8 +343,8 @@ __EOF__
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ]; then
 	# Workaround policy-rc.d
-	# echo $'#!/bin/sh\nexit 101' > "${WORK_DIR}/usr/sbin/policy-rc.d"
-	# chmod +x "${WORK_DIR}/usr/sbin/policy-rc.d"
+	echo $'#!/bin/sh\nexit 101' > "${WORK_DIR}/usr/sbin/policy-rc.d"
+	chmod +x "${WORK_DIR}/usr/sbin/policy-rc.d"
 	# Workaround initctl
 	chroot "${WORK_DIR}" dpkg-divert --local --rename --add /sbin/initctl
 	chroot "${WORK_DIR}" ln -fs /bin/true /sbin/initctl
@@ -626,7 +626,7 @@ chmod 0640 "${WORK_DIR}/var/lib/apt/lists/lock"
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ]; then
 	# Workaround policy-rc.d
-	# rm -f "${WORK_DIR}/usr/sbin/policy-rc.d"
+	rm -f "${WORK_DIR}/usr/sbin/policy-rc.d"
 	# Workaround initctl
 	rm -f "${WORK_DIR}/sbin/initctl"
 	chroot "${WORK_DIR}" dpkg-divert --rename --remove /sbin/initctl
