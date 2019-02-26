@@ -499,7 +499,6 @@ fi
 # Cloud
 ################################################################################
 
-# Check Environment Variable
 # Select Datasources
 chroot "${WORK_DIR}" sh -c "echo 'cloud-init cloud-init/datasources multiselect ${DATASOURCES}' | debconf-set-selections"
 
