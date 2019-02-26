@@ -586,7 +586,7 @@ chroot "${WORK_DIR}" systemctl enable ssh-keygen.service
 ################################################################################
 
 # Grub Boot Loader
-chroot "${WORK_DIR}" apt-get -y install grub-pc-bin grub-efi-amd64-bin
+chroot "${WORK_DIR}" apt-get -y install grub grub-pc-bin grub-efi-amd64-bin
 
 # Minimal Timeout
 sed -i -e 's@^GRUB_TIMEOUT=.*$@GRUB_TIMEOUT=0@' "${WORK_DIR}/etc/default/grub"
