@@ -1,0 +1,17 @@
+dist: xenial
+language: minimal
+addons:
+  apt:
+    packages:
+    - qemu
+    - gdisk
+    - dosfstools
+    - e2fsprogs
+    - pixz
+env:
+  matrix:
+    - RELEASE="trusty"
+    - RELEASE="xenial"
+    - RELEASE="bionic"
+script:
+  - sudo ./vagrant-box-libvirt-ubuntu

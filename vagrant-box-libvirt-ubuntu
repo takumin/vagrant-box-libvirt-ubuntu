@@ -1,0 +1,655 @@
+#!/bin/bash
+# vim: set noet :
+
+set -eu
+
+################################################################################
+# Default Variables
+################################################################################
+
+# Binary Architecture
+# Value:
+#   - amd64
+#   - arm64
+# shellcheck disable=SC2086
+: ${ARCH:='amd64'}
+
+# Release Codename
+# Value:
+#   - trusty
+#   - xenial
+#   - bionic
+# shellcheck disable=SC2086
+: ${RELEASE:='bionic'}
+
+# Kernel Package
+# Values:
+#   - virtual
+#   - virtual-hwe
+# shellcheck disable=SC2086
+: ${KERNEL:='virtual'}
+
+# Cloud-Init Datasources
+# Values:
+#   - NoCloud
+#   - None
+# shellcheck disable=SC2086
+: ${DATASOURCES:='NoCloud'}
+
+# User - Name
+# Values: String
+# shellcheck disable=SC2086
+: ${USER_NAME:='vagrant'}
+
+# User - Password
+# Values: String
+# shellcheck disable=SC2086
+: ${USER_PASS:='vagrant'}
+
+# User - Full Name
+# Values: String
+# shellcheck disable=SC2086
+: ${USER_FULL:='Vagrant User'}
+
+# User - SSH Public Key
+# Values: String
+# shellcheck disable=SC2086
+: ${USER_KEYS:='ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key'}
+
+# Apt Repository - Official
+# Values: String
+# shellcheck disable=SC2086
+: ${MIRROR_UBUNTU:='http://archive.ubuntu.com/ubuntu'}
+
+# Proxy - No Proxy List
+# Values: String
+# shellcheck disable=SC2086
+: ${NO_PROXY:=''}
+
+# Proxy - FTP Proxy
+# Values: String
+# shellcheck disable=SC2086
+: ${FTP_PROXY:=''}
+
+# Proxy - HTTP Proxy
+# Values: String
+# shellcheck disable=SC2086
+: ${HTTP_PROXY:=''}
+
+# Proxy - HTTPS Proxy
+# Values: String
+# shellcheck disable=SC2086
+: ${HTTPS_PROXY:=''}
+
+# Proxy - Apt Proxy Host
+# Values: String
+# shellcheck disable=SC2086
+: ${APT_PROXY_HOST:=''}
+
+# Proxy - Apt Proxy Port
+# Values: String
+# shellcheck disable=SC2086
+: ${APT_PROXY_PORT:=''}
+
+################################################################################
+# Available Environment
+################################################################################
+
+# Arch
+declare -a AVAILABLE_ARCH=(
+	'amd64'
+	'arm64'
+)
+
+# Release
+declare -a AVAILABLE_RELEASE=(
+	'trusty'
+	'xenial'
+	'bionic'
+)
+
+# Kernel
+declare -a AVAILABLE_KERNEL=(
+	'virtual'
+	'virtual-hwe'
+)
+
+################################################################################
+# Check Environment
+################################################################################
+
+# Array Util
+containsElement () {
+	local e match="$1"
+	shift
+	for e; do [[ "$e" == "$match" ]] && return 0; done
+	return 1
+}
+
+# Arch
+containsElement "${ARCH}" "${AVAILABLE_ARCH[@]}"
+RETVAL=$?
+if [ "${RETVAL}" != 0 ]; then
+	echo "ARCH: ${AVAILABLE_ARCH[*]}"
+	exit 1
+fi
+
+# Release
+containsElement "${RELEASE}" "${AVAILABLE_RELEASE[@]}"
+RETVAL=$?
+if [ "${RETVAL}" != 0 ]; then
+	echo "RELEASE: ${AVAILABLE_RELEASE[*]}"
+	exit 1
+fi
+
+# Kernel
+containsElement "${KERNEL}" "${AVAILABLE_KERNEL[@]}"
+RETVAL=$?
+if [ "${RETVAL}" != 0 ]; then
+	echo "KERNEL: ${AVAILABLE_KERNEL[*]}"
+	exit 1
+fi
+
+################################################################################
+# Normalization Environment
+################################################################################
+
+# Select Kernel Package
+case "${RELEASE}-${KERNEL}" in
+	"bionic-virtual-hwe"        ) KERNEL="virtual" ;;
+	*                           ) ;;
+esac
+
+################################################################################
+# Require Environment
+################################################################################
+
+# Working Process Mount Point
+WORK_DIR="/run/rootfs"
+
+# Install Bootloader Mount Point
+GRUB_DIR="/run/grub"
+
+# Vagrant Box Build Directory
+BUILD_DIR="/run/box"
+
+# Qemu Block Device Path
+BLOCK_DEV="/dev/nbd0"
+
+# Debootstrap Command
+DEBOOTSTRAP_COMMAND="debootstrap"
+
+# Debootstrap Architecture
+DEBOOTSTRAP_COMMAND="${DEBOOTSTRAP_COMMAND} --arch=${ARCH}"
+
+# Debootstrap Variant
+DEBOOTSTRAP_COMMAND="${DEBOOTSTRAP_COMMAND} --variant=minbase"
+
+# Debootstrap Components
+DEBOOTSTRAP_COMMAND="${DEBOOTSTRAP_COMMAND} --components=main,restricted,universe,multiverse"
+
+# Debootstrap Include Packages
+DEBOOTSTRAP_COMMAND="${DEBOOTSTRAP_COMMAND} --include=tzdata,locales,console-setup,gnupg"
+
+# Debootstrap Environment
+declare -a DEBOOTSTRAP_ENVIRONMENT=()
+
+# Check APT Proxy
+if [ "x${APT_PROXY_HOST}" != "x" ] && [ "x${APT_PROXY_PORT}" != "x" ]; then
+	# HTTP Proxy Environment
+	DEBOOTSTRAP_ENVIRONMENT=("${DEBOOTSTRAP_ENVIRONMENT[*]}" "http_proxy=http://${APT_PROXY_HOST}:${APT_PROXY_PORT}")
+
+	# HTTPS Proxy Environment
+	DEBOOTSTRAP_ENVIRONMENT=("${DEBOOTSTRAP_ENVIRONMENT[*]}" "https_proxy=http://${APT_PROXY_HOST}:${APT_PROXY_PORT}")
+fi
+
+# Check Debootstrap Environment
+if [ ${#DEBOOTSTRAP_ENVIRONMENT[*]} -gt 0 ]; then
+	# Debootstrap Override Command
+	DEBOOTSTRAP_COMMAND="env ${DEBOOTSTRAP_ENVIRONMENT[*]} ${DEBOOTSTRAP_COMMAND}"
+fi
+
+# Select Kernel Image Package
+case "${RELEASE}-${KERNEL}" in
+	"trusty-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
+	"xenial-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
+	"bionic-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
+	"trusty-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-lts-xenial" ;;
+	"xenial-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-16.04" ;;
+	"bionic-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
+esac
+
+################################################################################
+# Initialize
+################################################################################
+
+# Load Kernel Module
+lsmod | grep -qs nbd || modprobe nbd
+
+# Install Required Packages
+dpkg -l | awk '{print $2}' | grep -qs '^qemu$'       || apt-get -y --no-install-recommends install qemu
+dpkg -l | awk '{print $2}' | grep -qs '^gdisk$'      || apt-get -y --no-install-recommends install gdisk
+dpkg -l | awk '{print $2}' | grep -qs '^dosfstools$' || apt-get -y --no-install-recommends install dosfstools
+dpkg -l | awk '{print $2}' | grep -qs '^e2fsprogs$'  || apt-get -y --no-install-recommends install e2fsprogs
+dpkg -l | awk '{print $2}' | grep -qs '^pixz$'       || apt-get -y --no-install-recommends install pixz
+
+################################################################################
+# Cleanup
+################################################################################
+
+# Unmount Root Partition
+awk '{print $2}' /proc/mounts | grep -s "${WORK_DIR}" | sort -r | xargs --no-run-if-empty umount
+
+# Disconnect Disk Image
+qemu-nbd -d "${BLOCK_DEV}" > /dev/null
+
+################################################################################
+# Disk
+################################################################################
+
+# Mount Root File System Partition
+mkdir -p "${WORK_DIR}"
+mount -t tmpfs -o 'mode=0755' tmpfs "${WORK_DIR}"
+
+# Create Disk Image
+mkdir -p "${BUILD_DIR}"
+qemu-img create -q -f qcow2 "box.img" 32G
+
+# Connect Disk Image
+qemu-nbd -c "${BLOCK_DEV}" "box.img"
+
+# Clear Partition Table
+sgdisk -Z "${BLOCK_DEV}"
+
+# Create GPT Partition Table
+sgdisk -o "${BLOCK_DEV}"
+
+# Create BIOS Partition
+sgdisk -a 1 -n 1::2047  -c 1:"Bios" -t 1:ef02 "${BLOCK_DEV}"
+
+# Create EFI Partition
+sgdisk      -n 2::+512M -c 2:"Efi"  -t 2:ef00 "${BLOCK_DEV}"
+
+# Create Root Partition
+sgdisk      -n 3::-1    -c 3:"Root" -t 3:8300 "${BLOCK_DEV}"
+
+# Format EFI System Partition
+mkfs.vfat -F 32 -n "EfiFs" "${BLOCK_DEV}p1"
+
+# Format Root File System Partition
+mkfs.ext4 -L "RootFs" "${BLOCK_DEV}p2"
+
+# Mount Partition
+mkdir -p "${GRUB_DIR}"
+mount "${BLOCK_DEV}p2" "${GRUB_DIR}"
+
+# Mount EFI System Partition
+mkdir -p "${GRUB_DIR}/boot/efi"
+mount "${BLOCK_DEV}p1" "${GRUB_DIR}/boot/efi"
+
+# Sync Disk
+sync;sync;sync
+
+################################################################################
+# Debootstrap
+################################################################################
+
+# Install Base System
+${DEBOOTSTRAP_COMMAND} "${RELEASE}" "${WORK_DIR}" "${MIRROR_UBUNTU}"
+
+# Require Environment
+declare -x PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+declare -x HOME="/root"
+declare -x LC_ALL="C"
+declare -x LANGUAGE="C"
+declare -x LANG="C"
+declare -x DEBIAN_FRONTEND="noninteractive"
+declare -x DEBIAN_PRIORITY="critical"
+declare -x DEBCONF_NONINTERACTIVE_SEEN="true"
+
+# Cleanup Files
+find "${WORK_DIR}/dev"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${WORK_DIR}/proc"    -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${WORK_DIR}/run"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${WORK_DIR}/sys"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${WORK_DIR}/tmp"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${WORK_DIR}/var/tmp" -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+
+# Require Mount
+mount -t devtmpfs                   devtmpfs "${WORK_DIR}/dev"
+mount -t devpts   -o gid=5,mode=620 devpts   "${WORK_DIR}/dev/pts"
+mount -t proc                       proc     "${WORK_DIR}/proc"
+mount -t tmpfs    -o mode=755       tmpfs    "${WORK_DIR}/run"
+mount -t sysfs                      sysfs    "${WORK_DIR}/sys"
+mount -t tmpfs                      tmpfs    "${WORK_DIR}/tmp"
+mount -t tmpfs                      tmpfs    "${WORK_DIR}/var/tmp"
+chmod 1777 "${WORK_DIR}/dev/shm"
+
+################################################################################
+# System
+################################################################################
+
+# Default Hostname
+echo 'vagrant' > "${WORK_DIR}/etc/hostname"
+
+# Create FsTab
+cat > "${WORK_DIR}/etc/fstab" << __EOF__
+UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p1) / ext4 defaults 0 0
+tmpfs /tmp tmpfs defaults 0 0
+__EOF__
+
+################################################################################
+# Admin User
+################################################################################
+
+# Check Environment Variable
+# Add Group
+chroot "${WORK_DIR}" addgroup --system admin
+chroot "${WORK_DIR}" addgroup --system lpadmin
+chroot "${WORK_DIR}" addgroup --system sambashare
+chroot "${WORK_DIR}" addgroup --system netdev
+
+# Add User
+chroot "${WORK_DIR}" adduser --disabled-password --gecos "${USER_FULL},,," "${USER_NAME}"
+chroot "${WORK_DIR}" adduser "${USER_NAME}" adm
+chroot "${WORK_DIR}" adduser "${USER_NAME}" admin
+chroot "${WORK_DIR}" adduser "${USER_NAME}" audio
+chroot "${WORK_DIR}" adduser "${USER_NAME}" cdrom
+chroot "${WORK_DIR}" adduser "${USER_NAME}" dialout
+chroot "${WORK_DIR}" adduser "${USER_NAME}" dip
+chroot "${WORK_DIR}" adduser "${USER_NAME}" lpadmin
+chroot "${WORK_DIR}" adduser "${USER_NAME}" plugdev
+chroot "${WORK_DIR}" adduser "${USER_NAME}" sambashare
+chroot "${WORK_DIR}" adduser "${USER_NAME}" staff
+chroot "${WORK_DIR}" adduser "${USER_NAME}" sudo
+chroot "${WORK_DIR}" adduser "${USER_NAME}" users
+chroot "${WORK_DIR}" adduser "${USER_NAME}" video
+chroot "${WORK_DIR}" adduser "${USER_NAME}" netdev
+
+# Change Password
+chroot "${WORK_DIR}" sh -c "echo ${USER_NAME}:${USER_PASS} | chpasswd"
+
+# SSH Public Key
+if [ "x${USER_KEYS}" != "x" ]; then
+	mkdir -p "${WORK_DIR}/home/${USER_NAME}/.ssh"
+	chmod 0700 "${WORK_DIR}/home/${USER_NAME}/.ssh"
+	echo "${USER_KEYS}" > "${WORK_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
+	chmod 0644 "${WORK_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
+fi
+
+# User Dir Permission
+chroot "${WORK_DIR}" chown -R "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}"
+
+################################################################################
+# Repository
+################################################################################
+
+# Official Repository
+cat > "${WORK_DIR}/etc/apt/sources.list" << __EOF__
+# Official Repository
+deb ${MIRROR_UBUNTU} ${RELEASE}           main restricted universe multiverse
+deb ${MIRROR_UBUNTU} ${RELEASE}-updates   main restricted universe multiverse
+deb ${MIRROR_UBUNTU} ${RELEASE}-backports main restricted universe multiverse
+deb ${MIRROR_UBUNTU} ${RELEASE}-security  main restricted universe multiverse
+__EOF__
+
+################################################################################
+# Upgrade
+################################################################################
+
+# Update Repository
+chroot "${WORK_DIR}" apt-get -y update
+
+# Upgrade System
+chroot "${WORK_DIR}" apt-get -y dist-upgrade
+
+################################################################################
+# Kernel
+################################################################################
+
+# Install Kernel
+chroot "${WORK_DIR}" apt-get -y --no-install-recommends install "${KERNEL_IMAGE_PACKAGE}"
+
+# Get Kernel Version
+KERNEL_VERSION="$(chroot "${WORK_DIR}" dpkg -l | awk '{print $2}' | grep -E 'linux-image-[0-9\.-]+-generic' | sed -E 's/linux-image-//')"
+
+################################################################################
+# Minimal
+################################################################################
+
+# Minimal Package
+chroot "${WORK_DIR}" apt-get -y install ubuntu-minimal
+
+################################################################################
+# Standard
+################################################################################
+
+# Install Package
+chroot "${WORK_DIR}" apt-get -y install ubuntu-standard
+
+################################################################################
+# Server
+################################################################################
+
+# Install Package
+chroot "${WORK_DIR}" apt-get -y install ubuntu-server
+
+################################################################################
+# Network
+################################################################################
+
+# Check Release Version
+if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
+	# Install Package
+	chroot "${WORK_DIR}" apt-get -y --no-install-recommends install network-manager
+
+	# Managed Interface
+	sed -i -e 's@source-directory.*@source /etc/network/interfaces.d/\*@' "${WORK_DIR}/etc/network/interfaces"
+	sed -i -e 's/managed=.*/managed=true/;' "${WORK_DIR}/etc/NetworkManager/NetworkManager.conf"
+fi
+
+# Check Release Version
+if [ "${RELEASE}" = 'xenial' ] || [ "${RELEASE}" = 'bionic' ]; then
+	# Install Package
+	chroot "${WORK_DIR}" apt-get -y install nplan
+fi
+
+################################################################################
+# Netboot
+################################################################################
+
+# Require Package
+chroot "${WORK_DIR}" apt-get -y install cloud-initramfs-copymods cloud-initramfs-dyn-netconf cloud-initramfs-rooturl
+
+# Check Release Version
+if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
+	# Workaround initramfs dns
+	cat > "${WORK_DIR}/usr/share/initramfs-tools/hooks/libnss_dns" <<- '__EOF__'
+	#!/bin/sh -e
+
+	if [ "$1" = 'prereqs' ]; then
+		exit 0
+	fi
+
+	. /usr/share/initramfs-tools/hook-functions
+
+	for _LIBRARY in /lib/x86_64-linux-gnu/libnss_dns*; do
+		if [ -e "${_LIBRARY}" ]; then
+			copy_exec ${_LIBRARY} /lib
+		fi
+	done
+	__EOF__
+
+	# Execute Permission
+	chmod 0755 "${WORK_DIR}/usr/share/initramfs-tools/hooks/libnss_dns"
+fi
+
+################################################################################
+# Cloud
+################################################################################
+
+# Check Environment Variable
+# Select Datasources
+chroot "${WORK_DIR}" sh -c "echo 'cloud-init cloud-init/datasources multiselect ${DATASOURCES}' | debconf-set-selections"
+
+# Require Package
+chroot "${WORK_DIR}" apt-get -y install cloud-init
+
+# Generate Network Config from MetaData Server
+cat > "${WORK_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zz-clear-network-interfaces" <<- '__EOF__'
+#!/bin/sh
+
+PREREQ=""
+
+prereqs()
+{
+	echo "$PREREQ"
+}
+
+case "$1" in
+prereqs)
+	prereqs
+	exit 0
+	;;
+esac
+
+clear_network_interfaces()
+{
+	local intf
+	for intf in $(ls /sys/class/net/); do
+		ip addr flush dev "${intf}"
+		ip link set "${intf}" down
+	done
+}
+
+. /scripts/functions
+
+clear_network_interfaces
+__EOF__
+
+# Execute Permission
+chmod 0755 "${WORK_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zz-clear-network-interfaces"
+
+################################################################################
+# SSH
+################################################################################
+
+# Require Package
+chroot "${WORK_DIR}" apt-get -y install ssh
+
+# Configure OpenSSH Server
+echo ''          >> "${WORK_DIR}/etc/ssh/sshd_config"
+echo 'UseDNS=no' >> "${WORK_DIR}/etc/ssh/sshd_config"
+
+# Remove Temporary SSH Host Keys
+find "${WORK_DIR}/etc/ssh" -type f -name '*_host_*' -exec rm {} \;
+
+# Generate SSH Host Keys for System Boot
+cat > "${WORK_DIR}/etc/systemd/system/ssh-keygen.service" << __EOF__
+[Unit]
+Description=Generate SSH Host Keys During Boot
+Before=ssh.service
+After=local-fs.target
+ConditionPathExists=|!/etc/ssh/ssh_host_dsa_key
+ConditionPathExists=|!/etc/ssh/ssh_host_dsa_key.pub
+ConditionPathExists=|!/etc/ssh/ssh_host_ecdsa_key
+ConditionPathExists=|!/etc/ssh/ssh_host_ecdsa_key.pub
+ConditionPathExists=|!/etc/ssh/ssh_host_ed25519_key
+ConditionPathExists=|!/etc/ssh/ssh_host_ed25519_key.pub
+ConditionPathExists=|!/etc/ssh/ssh_host_rsa_key
+ConditionPathExists=|!/etc/ssh/ssh_host_rsa_key.pub
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/dpkg-reconfigure --frontend noninteractive openssh-server
+
+[Install]
+WantedBy=multi-user.target
+__EOF__
+
+# Enabled Systemd Service
+chroot "${WORK_DIR}" systemctl enable ssh-keygen.service
+
+################################################################################
+# Initramfs
+################################################################################
+
+# Cleanup Initramfs
+chroot "${WORK_DIR}" update-initramfs -d -k all
+
+# Create Initramfs
+chroot "${WORK_DIR}" update-initramfs -c -k "${KERNEL_VERSION}"
+
+################################################################################
+# Cleanup
+################################################################################
+
+# Kernel&Initramfs Old Symbolic Link
+rm -f "${WORK_DIR}/vmlinuz.old"
+rm -f "${WORK_DIR}/initrd.img.old"
+
+# Out Of Packages
+chroot "${WORK_DIR}" apt-get -y autoremove --purge
+
+# Package Archive
+chroot "${WORK_DIR}" apt-get -y clean
+
+# Repository List
+find "${WORK_DIR}/var/lib/apt/lists" -type f -print0 | xargs -0 rm -f
+touch "${WORK_DIR}/var/lib/apt/lists/lock"
+chmod 0640 "${WORK_DIR}/var/lib/apt/lists/lock"
+
+################################################################################
+# Archive
+################################################################################
+
+# Unmount Partition
+awk '{print $2}' /proc/mounts | grep -s "${WORK_DIR}/" | sort -r | xargs --no-run-if-empty umount
+
+# Copy RootFs Files
+tar --acls --xattrs --one-file-system -cpf - -C ${WORK_DIR} . | tar --acls --xattrs -xpf - -C ${GRUB_DIR}
+
+# Mount Partition
+mount -t devtmpfs                   devtmpfs "${GRUB_DIR}/dev"
+mount -t devpts   -o gid=5,mode=620 devpts   "${GRUB_DIR}/dev/pts"
+mount -t proc                       proc     "${GRUB_DIR}/proc"
+mount -t tmpfs    -o mode=755       tmpfs    "${GRUB_DIR}/run"
+mount -t sysfs                      sysfs    "${GRUB_DIR}/sys"
+mount -t tmpfs                      tmpfs    "${GRUB_DIR}/tmp"
+mount -t tmpfs                      tmpfs    "${GRUB_DIR}/var/tmp"
+chmod 1777 "${GRUB_DIR}/dev/shm"
+
+# Install Boot Recode
+chroot "${GRUB_DIR}" grub-install --target=i386-pc "${BLOCK_DEV}"
+
+# Unmount Partition
+awk '{print $2}' /proc/mounts | grep -s "${WORK_DIR}" | sort -r | xargs --no-run-if-empty umount
+awk '{print $2}' /proc/mounts | grep -s "${GRUB_DIR}" | sort -r | xargs --no-run-if-empty umount
+
+# Disconnect Disk Image
+qemu-nbd -d "${BLOCK_DEV}" > /dev/null
+
+# Compressed Disk Image
+qemu-img convert -c -f qcow2 -O qcow2 "box.img" "${BUILD_DIR}/box.img"
+
+################################################################################
+# Vagrant Boxes
+################################################################################
+
+# Create Vagrant Configuration File
+cat > "${BUILD_DIR}/Vagrantfile" << '__EOF__'
+Vagrant.configure("2") do |config|
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.driver = "kvm"
+  end
+end
+__EOF__
+
+# Create Vagrant Metadata File
+cat > "${BUILD_DIR}/metadata.json" << '__EOF__'
+{"format":"qcow2","provider":"libvirt","virtual_size":16}
+__EOF__
+
+# Create Vagrant Boxes
+tar -cvf "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box" -C "${BUILD_DIR}" -I pixz .
