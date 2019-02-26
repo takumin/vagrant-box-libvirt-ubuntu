@@ -340,6 +340,9 @@ UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p2) /boot/efi vfat defaults 0 0
 tmpfs /tmp tmpfs defaults 0 0
 __EOF__
 
+# Apt Speed Up
+echo 'force-unsafe-io' "${WORK_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
+
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ]; then
 	# Workaround policy-rc.d
@@ -622,6 +625,9 @@ chroot "${WORK_DIR}" apt-get -y clean
 find "${WORK_DIR}/var/lib/apt/lists" -type f -print0 | xargs -0 rm -f
 touch "${WORK_DIR}/var/lib/apt/lists/lock"
 chmod 0640 "${WORK_DIR}/var/lib/apt/lists/lock"
+
+# Remote Apt Speed Up
+rm -f "${WORK_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
 
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ]; then
