@@ -8,6 +8,7 @@ addons:
     - dosfstools
     - e2fsprogs
     - pixz
+    - debootstrap
 env:
   matrix:
     - RELEASE="trusty"

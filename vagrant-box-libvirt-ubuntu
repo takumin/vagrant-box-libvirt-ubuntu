@@ -227,11 +227,12 @@ esac
 lsmod | grep -qs nbd || modprobe nbd
 
 # Install Required Packages
-dpkg -l | awk '{print $2}' | grep -qs '^qemu$'       || apt-get -y --no-install-recommends install qemu
-dpkg -l | awk '{print $2}' | grep -qs '^gdisk$'      || apt-get -y --no-install-recommends install gdisk
-dpkg -l | awk '{print $2}' | grep -qs '^dosfstools$' || apt-get -y --no-install-recommends install dosfstools
-dpkg -l | awk '{print $2}' | grep -qs '^e2fsprogs$'  || apt-get -y --no-install-recommends install e2fsprogs
-dpkg -l | awk '{print $2}' | grep -qs '^pixz$'       || apt-get -y --no-install-recommends install pixz
+dpkg -l | awk '{print $2}' | grep -qs '^qemu$'        || apt-get -y --no-install-recommends install qemu
+dpkg -l | awk '{print $2}' | grep -qs '^gdisk$'       || apt-get -y --no-install-recommends install gdisk
+dpkg -l | awk '{print $2}' | grep -qs '^dosfstools$'  || apt-get -y --no-install-recommends install dosfstools
+dpkg -l | awk '{print $2}' | grep -qs '^e2fsprogs$'   || apt-get -y --no-install-recommends install e2fsprogs
+dpkg -l | awk '{print $2}' | grep -qs '^pixz$'        || apt-get -y --no-install-recommends install pixz
+dpkg -l | awk '{print $2}' | grep -qs '^debootstrap$' || apt-get -y --no-install-recommends install debootstrap
 
 ################################################################################
 # Cleanup
@@ -274,18 +275,18 @@ sgdisk      -n 2::+512M -c 2:"Efi"  -t 2:ef00 "${BLOCK_DEV}"
 sgdisk      -n 3::-1    -c 3:"Root" -t 3:8300 "${BLOCK_DEV}"
 
 # Format EFI System Partition
-mkfs.vfat -F 32 -n "EfiFs" "${BLOCK_DEV}p1"
+mkfs.vfat -F 32 -n "EfiFs" "${BLOCK_DEV}p2"
 
 # Format Root File System Partition
-mkfs.ext4 -L "RootFs" "${BLOCK_DEV}p2"
+mkfs.ext4 -L "RootFs" "${BLOCK_DEV}p3"
 
 # Mount Partition
 mkdir -p "${GRUB_DIR}"
-mount "${BLOCK_DEV}p2" "${GRUB_DIR}"
+mount "${BLOCK_DEV}p3" "${GRUB_DIR}"
 
 # Mount EFI System Partition
 mkdir -p "${GRUB_DIR}/boot/efi"
-mount "${BLOCK_DEV}p1" "${GRUB_DIR}/boot/efi"
+mount "${BLOCK_DEV}p2" "${GRUB_DIR}/boot/efi"
 
 # Sync Disk
 sync;sync;sync
@@ -334,7 +335,8 @@ echo 'vagrant' > "${WORK_DIR}/etc/hostname"
 
 # Create FsTab
 cat > "${WORK_DIR}/etc/fstab" << __EOF__
-UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p1) / ext4 defaults 0 0
+UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p3) / ext4 defaults 0 0
+UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p2) /boot/efi vfat defaults 0 0
 tmpfs /tmp tmpfs defaults 0 0
 __EOF__
 
