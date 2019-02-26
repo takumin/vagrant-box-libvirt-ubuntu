@@ -10,6 +10,8 @@ addons:
     - pixz
     - debootstrap
 env:
+  global:
+    - MIRROR_UBUNTU="http://us-east-1.ec2.archive.ubuntu.com/ubuntu"
   matrix:
     - RELEASE="trusty"
     - RELEASE="xenial"
