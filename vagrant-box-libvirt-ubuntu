@@ -164,14 +164,17 @@ esac
 # Require Environment
 ################################################################################
 
-# Working Process Mount Point
-WORK_DIR="/run/rootfs"
+# Working Directory
+WORK_DIR="/run/vagrant"
 
-# Install Bootloader Mount Point
-GRUB_DIR="/run/grub"
+# Tmpfs Root Filesystem Mount Point
+TMPFS_DIR="/run/vagrant/rootfs"
+
+# Grub Bootloader Mount Point
+GRUB_DIR="/run/vagrant/grub"
 
 # Vagrant Box Build Directory
-BUILD_DIR="/run/box"
+BUILD_DIR="/run/vagrant/box"
 
 # Qemu Block Device Path
 BLOCK_DEV="/dev/nbd0"
@@ -239,7 +242,7 @@ dpkg -l | awk '{print $2}' | grep -qs '^debootstrap$' || apt-get -qq --no-instal
 ################################################################################
 
 # Unmount Root Partition
-awk '{print $2}' /proc/mounts | grep -s "${WORK_DIR}" | sort -r | xargs --no-run-if-empty umount
+awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
 
 # Disconnect Disk Image
 qemu-nbd -d "${BLOCK_DEV}" > /dev/null
@@ -249,15 +252,15 @@ qemu-nbd -d "${BLOCK_DEV}" > /dev/null
 ################################################################################
 
 # Mount Root File System Partition
-mkdir -p "${WORK_DIR}"
-mount -t tmpfs -o 'mode=0755' tmpfs "${WORK_DIR}"
+mkdir -p "${TMPFS_DIR}"
+mount -t tmpfs -o 'mode=0755' tmpfs "${TMPFS_DIR}"
 
 # Create Disk Image
-mkdir -p "${BUILD_DIR}"
-qemu-img create -q -f qcow2 "box.img" 32G
+mkdir -p "${WORK_DIR}"
+qemu-img create -q -f qcow2 "${WORK_DIR}/box.img" 32G
 
 # Connect Disk Image
-qemu-nbd -c "${BLOCK_DEV}" "box.img"
+qemu-nbd -c "${BLOCK_DEV}" "${WORK_DIR}/box.img"
 
 # Clear Partition Table
 sgdisk -Z "${BLOCK_DEV}"
@@ -296,7 +299,7 @@ sync;sync;sync
 ################################################################################
 
 # Install Base System
-${DEBOOTSTRAP_COMMAND} "${RELEASE}" "${WORK_DIR}" "${MIRROR_UBUNTU}"
+${DEBOOTSTRAP_COMMAND} "${RELEASE}" "${TMPFS_DIR}" "${MIRROR_UBUNTU}"
 
 # Require Environment
 declare -x PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -309,42 +312,42 @@ declare -x DEBIAN_PRIORITY="critical"
 declare -x DEBCONF_NONINTERACTIVE_SEEN="true"
 
 # Cleanup Files
-find "${WORK_DIR}/dev"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
-find "${WORK_DIR}/proc"    -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
-find "${WORK_DIR}/run"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
-find "${WORK_DIR}/sys"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
-find "${WORK_DIR}/tmp"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
-find "${WORK_DIR}/var/tmp" -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${TMPFS_DIR}/dev"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${TMPFS_DIR}/proc"    -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${TMPFS_DIR}/run"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${TMPFS_DIR}/sys"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${TMPFS_DIR}/tmp"     -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
+find "${TMPFS_DIR}/var/tmp" -mindepth 1 -print0 | xargs -0 --no-run-if-empty rm -fr
 
 # Require Mount
-mount -t devtmpfs                   devtmpfs "${WORK_DIR}/dev"
-mount -t devpts   -o gid=5,mode=620 devpts   "${WORK_DIR}/dev/pts"
-mount -t proc                       proc     "${WORK_DIR}/proc"
-mount -t tmpfs    -o mode=755       tmpfs    "${WORK_DIR}/run"
-mount -t sysfs                      sysfs    "${WORK_DIR}/sys"
-mount -t tmpfs                      tmpfs    "${WORK_DIR}/tmp"
-mount -t tmpfs                      tmpfs    "${WORK_DIR}/var/tmp"
-chmod 1777 "${WORK_DIR}/dev/shm"
+mount -t devtmpfs                   devtmpfs "${TMPFS_DIR}/dev"
+mount -t devpts   -o gid=5,mode=620 devpts   "${TMPFS_DIR}/dev/pts"
+mount -t proc                       proc     "${TMPFS_DIR}/proc"
+mount -t tmpfs    -o mode=755       tmpfs    "${TMPFS_DIR}/run"
+mount -t sysfs                      sysfs    "${TMPFS_DIR}/sys"
+mount -t tmpfs                      tmpfs    "${TMPFS_DIR}/tmp"
+mount -t tmpfs                      tmpfs    "${TMPFS_DIR}/var/tmp"
+chmod 1777 "${TMPFS_DIR}/dev/shm"
 
 ################################################################################
 # Workaround
 ################################################################################
 
 # Apt Speed Up
-echo 'force-unsafe-io' > "${WORK_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
+echo 'force-unsafe-io' > "${TMPFS_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
 
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ]; then
 	# Workaround policy-rc.d
-	echo $'#!/bin/sh\nexit 101' > "${WORK_DIR}/usr/sbin/policy-rc.d"
-	chmod +x "${WORK_DIR}/usr/sbin/policy-rc.d"
+	echo $'#!/bin/sh\nexit 101' > "${TMPFS_DIR}/usr/sbin/policy-rc.d"
+	chmod +x "${TMPFS_DIR}/usr/sbin/policy-rc.d"
 
 	# Workaround initctl
-	chroot "${WORK_DIR}" dpkg-divert --local --rename --add /sbin/initctl
-	chroot "${WORK_DIR}" ln -fs /bin/true /sbin/initctl
+	chroot "${TMPFS_DIR}" dpkg-divert --local --rename --add /sbin/initctl
+	chroot "${TMPFS_DIR}" ln -fs /bin/true /sbin/initctl
 
 	# Workaround utmp
-	chroot "${WORK_DIR}" touch /var/run/utmp
+	chroot "${TMPFS_DIR}" touch /var/run/utmp
 fi
 
 ################################################################################
@@ -352,10 +355,10 @@ fi
 ################################################################################
 
 # Default Hostname
-echo 'vagrant' > "${WORK_DIR}/etc/hostname"
+echo 'vagrant' > "${TMPFS_DIR}/etc/hostname"
 
 # Create FsTab
-cat > "${WORK_DIR}/etc/fstab" << __EOF__
+cat > "${TMPFS_DIR}/etc/fstab" << __EOF__
 UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p3) / ext4 defaults 0 0
 UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p2) /boot/efi vfat defaults 0 0
 tmpfs /tmp tmpfs defaults 0 0
@@ -366,48 +369,48 @@ __EOF__
 ################################################################################
 
 # Add Group
-chroot "${WORK_DIR}" addgroup --system admin
-chroot "${WORK_DIR}" addgroup --system lpadmin
-chroot "${WORK_DIR}" addgroup --system sambashare
-chroot "${WORK_DIR}" addgroup --system netdev
+chroot "${TMPFS_DIR}" addgroup --system admin
+chroot "${TMPFS_DIR}" addgroup --system lpadmin
+chroot "${TMPFS_DIR}" addgroup --system sambashare
+chroot "${TMPFS_DIR}" addgroup --system netdev
 
 # Add User
-chroot "${WORK_DIR}" adduser --disabled-password --gecos "${USER_FULL},,," "${USER_NAME}"
-chroot "${WORK_DIR}" adduser "${USER_NAME}" adm
-chroot "${WORK_DIR}" adduser "${USER_NAME}" admin
-chroot "${WORK_DIR}" adduser "${USER_NAME}" audio
-chroot "${WORK_DIR}" adduser "${USER_NAME}" cdrom
-chroot "${WORK_DIR}" adduser "${USER_NAME}" dialout
-chroot "${WORK_DIR}" adduser "${USER_NAME}" dip
-chroot "${WORK_DIR}" adduser "${USER_NAME}" lpadmin
-chroot "${WORK_DIR}" adduser "${USER_NAME}" plugdev
-chroot "${WORK_DIR}" adduser "${USER_NAME}" sambashare
-chroot "${WORK_DIR}" adduser "${USER_NAME}" staff
-chroot "${WORK_DIR}" adduser "${USER_NAME}" sudo
-chroot "${WORK_DIR}" adduser "${USER_NAME}" users
-chroot "${WORK_DIR}" adduser "${USER_NAME}" video
-chroot "${WORK_DIR}" adduser "${USER_NAME}" netdev
+chroot "${TMPFS_DIR}" adduser --disabled-password --gecos "${USER_FULL},,," "${USER_NAME}"
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" adm
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" admin
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" audio
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" cdrom
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" dialout
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" dip
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" lpadmin
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" plugdev
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" sambashare
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" staff
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" sudo
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" users
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" video
+chroot "${TMPFS_DIR}" adduser "${USER_NAME}" netdev
 
 # Change Password
-chroot "${WORK_DIR}" sh -c "echo ${USER_NAME}:${USER_PASS} | chpasswd"
+chroot "${TMPFS_DIR}" sh -c "echo ${USER_NAME}:${USER_PASS} | chpasswd"
 
 # SSH Public Key
 if [ "x${USER_KEYS}" != "x" ]; then
-	mkdir -p "${WORK_DIR}/home/${USER_NAME}/.ssh"
-	chmod 0700 "${WORK_DIR}/home/${USER_NAME}/.ssh"
-	echo "${USER_KEYS}" > "${WORK_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
-	chmod 0644 "${WORK_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
+	mkdir -p "${TMPFS_DIR}/home/${USER_NAME}/.ssh"
+	chmod 0700 "${TMPFS_DIR}/home/${USER_NAME}/.ssh"
+	echo "${USER_KEYS}" > "${TMPFS_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
+	chmod 0644 "${TMPFS_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
 fi
 
 # User Dir Permission
-chroot "${WORK_DIR}" chown -R "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}"
+chroot "${TMPFS_DIR}" chown -R "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}"
 
 ################################################################################
 # Repository
 ################################################################################
 
 # Official Repository
-cat > "${WORK_DIR}/etc/apt/sources.list" << __EOF__
+cat > "${TMPFS_DIR}/etc/apt/sources.list" << __EOF__
 # Official Repository
 deb ${MIRROR_UBUNTU} ${RELEASE}           main restricted universe multiverse
 deb ${MIRROR_UBUNTU} ${RELEASE}-updates   main restricted universe multiverse
@@ -420,34 +423,34 @@ __EOF__
 ################################################################################
 
 # Update Repository
-chroot "${WORK_DIR}" apt-get -qq update
+chroot "${TMPFS_DIR}" apt-get -qq update
 
 # Upgrade System
-chroot "${WORK_DIR}" apt-get -qq dist-upgrade
+chroot "${TMPFS_DIR}" apt-get -qq dist-upgrade
 
 ################################################################################
 # Kernel
 ################################################################################
 
 # Install Kernel
-chroot "${WORK_DIR}" apt-get -qq --no-install-recommends install "${KERNEL_IMAGE_PACKAGE}"
+chroot "${TMPFS_DIR}" apt-get -qq --no-install-recommends install "${KERNEL_IMAGE_PACKAGE}"
 
 # Get Kernel Version
-KERNEL_VERSION="$(chroot "${WORK_DIR}" dpkg -l | awk '{print $2}' | grep -E 'linux-image-[0-9\.-]+-generic' | sed -E 's/linux-image-//')"
+KERNEL_VERSION="$(chroot "${TMPFS_DIR}" dpkg -l | awk '{print $2}' | grep -E 'linux-image-[0-9\.-]+-generic' | sed -E 's/linux-image-//')"
 
 ################################################################################
 # Minimal
 ################################################################################
 
 # Minimal Package
-chroot "${WORK_DIR}" apt-get -qq install ubuntu-minimal
+chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-minimal
 
 ################################################################################
 # Standard
 ################################################################################
 
 # Install Package
-chroot "${WORK_DIR}" apt-get -qq install ubuntu-standard
+chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-standard
 
 ################################################################################
 # Systemd
@@ -456,7 +459,7 @@ chroot "${WORK_DIR}" apt-get -qq install ubuntu-standard
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ]; then
 	# Install Package
-	chroot "${WORK_DIR}" apt-get -qq install systemd
+	chroot "${TMPFS_DIR}" apt-get -qq install systemd
 fi
 
 ################################################################################
@@ -466,20 +469,20 @@ fi
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 	# Install Require Packages
-	chroot "${WORK_DIR}" apt-get -qq install ethtool ifenslave
+	chroot "${TMPFS_DIR}" apt-get -qq install ethtool ifenslave
 
 	# Install Package
-	chroot "${WORK_DIR}" apt-get -qq --no-install-recommends install network-manager
+	chroot "${TMPFS_DIR}" apt-get -qq --no-install-recommends install network-manager
 
 	# Managed Interface
-	sed -i -e 's@source-directory.*@source /etc/network/interfaces.d/\*@' "${WORK_DIR}/etc/network/interfaces"
-	sed -i -e 's/managed=.*/managed=true/;' "${WORK_DIR}/etc/NetworkManager/NetworkManager.conf"
+	sed -i -e 's@source-directory.*@source /etc/network/interfaces.d/\*@' "${TMPFS_DIR}/etc/network/interfaces"
+	sed -i -e 's/managed=.*/managed=true/;' "${TMPFS_DIR}/etc/NetworkManager/NetworkManager.conf"
 fi
 
 # Check Release Version
 if [ "${RELEASE}" = 'xenial' ] || [ "${RELEASE}" = 'bionic' ]; then
 	# Install Package
-	chroot "${WORK_DIR}" apt-get -qq install nplan
+	chroot "${TMPFS_DIR}" apt-get -qq install nplan
 fi
 
 ################################################################################
@@ -487,12 +490,12 @@ fi
 ################################################################################
 
 # Require Package
-chroot "${WORK_DIR}" apt-get -qq install cloud-initramfs-copymods cloud-initramfs-dyn-netconf cloud-initramfs-rooturl overlayroot
+chroot "${TMPFS_DIR}" apt-get -qq install cloud-initramfs-copymods cloud-initramfs-dyn-netconf cloud-initramfs-rooturl overlayroot
 
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 	# Workaround initramfs dns
-	cat > "${WORK_DIR}/usr/share/initramfs-tools/hooks/libnss_dns" <<- '__EOF__'
+	cat > "${TMPFS_DIR}/usr/share/initramfs-tools/hooks/libnss_dns" <<- '__EOF__'
 	#!/bin/sh -e
 
 	if [ "$1" = 'prereqs' ]; then
@@ -509,7 +512,7 @@ if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 	__EOF__
 
 	# Execute Permission
-	chmod 0755 "${WORK_DIR}/usr/share/initramfs-tools/hooks/libnss_dns"
+	chmod 0755 "${TMPFS_DIR}/usr/share/initramfs-tools/hooks/libnss_dns"
 fi
 
 ################################################################################
@@ -517,13 +520,13 @@ fi
 ################################################################################
 
 # Select Datasources
-chroot "${WORK_DIR}" sh -c "echo 'cloud-init cloud-init/datasources multiselect ${DATASOURCES}' | debconf-set-selections"
+chroot "${TMPFS_DIR}" sh -c "echo 'cloud-init cloud-init/datasources multiselect ${DATASOURCES}' | debconf-set-selections"
 
 # Require Package
-chroot "${WORK_DIR}" apt-get -qq install cloud-init
+chroot "${TMPFS_DIR}" apt-get -qq install cloud-init
 
 # Generate Network Config from MetaData Server
-cat > "${WORK_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zz-clear-network-interfaces" <<- '__EOF__'
+cat > "${TMPFS_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zz-clear-network-interfaces" <<- '__EOF__'
 #!/bin/sh
 
 PREREQ=""
@@ -555,24 +558,24 @@ clear_network_interfaces
 __EOF__
 
 # Execute Permission
-chmod 0755 "${WORK_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zz-clear-network-interfaces"
+chmod 0755 "${TMPFS_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zz-clear-network-interfaces"
 
 ################################################################################
 # SSH
 ################################################################################
 
 # Require Package
-chroot "${WORK_DIR}" apt-get -qq install ssh
+chroot "${TMPFS_DIR}" apt-get -qq install ssh
 
 # Configure OpenSSH Server
-echo ''          >> "${WORK_DIR}/etc/ssh/sshd_config"
-echo 'UseDNS=no' >> "${WORK_DIR}/etc/ssh/sshd_config"
+echo ''          >> "${TMPFS_DIR}/etc/ssh/sshd_config"
+echo 'UseDNS=no' >> "${TMPFS_DIR}/etc/ssh/sshd_config"
 
 # Remove Temporary SSH Host Keys
-find "${WORK_DIR}/etc/ssh" -type f -name '*_host_*' -exec rm {} \;
+find "${TMPFS_DIR}/etc/ssh" -type f -name '*_host_*' -exec rm {} \;
 
 # Generate SSH Host Keys for System Boot
-cat > "${WORK_DIR}/etc/systemd/system/ssh-keygen.service" << __EOF__
+cat > "${TMPFS_DIR}/etc/systemd/system/ssh-keygen.service" << __EOF__
 [Unit]
 Description=Generate SSH Host Keys During Boot
 Before=ssh.service
@@ -596,61 +599,61 @@ WantedBy=multi-user.target
 __EOF__
 
 # Enabled Systemd Service
-chroot "${WORK_DIR}" systemctl enable ssh-keygen.service
+chroot "${TMPFS_DIR}" systemctl enable ssh-keygen.service
 
 ################################################################################
 # Boot
 ################################################################################
 
 # Grub Boot Loader
-chroot "${WORK_DIR}" apt-get -qq install grub2 grub-pc-bin grub-efi-amd64-bin
+chroot "${TMPFS_DIR}" apt-get -qq install grub2 grub-pc-bin grub-efi-amd64-bin
 
 # Minimal Timeout
-sed -i -e 's@^GRUB_TIMEOUT=.*$@GRUB_TIMEOUT=0@' "${WORK_DIR}/etc/default/grub"
+sed -i -e 's@^GRUB_TIMEOUT=.*$@GRUB_TIMEOUT=0@' "${TMPFS_DIR}/etc/default/grub"
 
 # Default Text Console
-sed -i -e 's@^GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"$@GRUB_CMDLINE_LINUX_DEFAULT="quiet"@' "${WORK_DIR}/etc/default/grub"
+sed -i -e 's@^GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"$@GRUB_CMDLINE_LINUX_DEFAULT="quiet"@' "${TMPFS_DIR}/etc/default/grub"
 
 ################################################################################
 # Initramfs
 ################################################################################
 
 # Cleanup Initramfs
-chroot "${WORK_DIR}" update-initramfs -d -k all
+chroot "${TMPFS_DIR}" update-initramfs -d -k all
 
 # Create Initramfs
-chroot "${WORK_DIR}" update-initramfs -c -k "${KERNEL_VERSION}"
+chroot "${TMPFS_DIR}" update-initramfs -c -k "${KERNEL_VERSION}"
 
 ################################################################################
 # Cleanup
 ################################################################################
 
 # Kernel&Initramfs Old Symbolic Link
-rm -f "${WORK_DIR}/vmlinuz.old"
-rm -f "${WORK_DIR}/initrd.img.old"
+rm -f "${TMPFS_DIR}/vmlinuz.old"
+rm -f "${TMPFS_DIR}/initrd.img.old"
 
 # Out Of Packages
-chroot "${WORK_DIR}" apt-get -qq autoremove --purge
+chroot "${TMPFS_DIR}" apt-get -qq autoremove --purge
 
 # Package Archive
-chroot "${WORK_DIR}" apt-get -qq clean
+chroot "${TMPFS_DIR}" apt-get -qq clean
 
 # Repository List
-find "${WORK_DIR}/var/lib/apt/lists" -type f -print0 | xargs -0 rm -f
-touch "${WORK_DIR}/var/lib/apt/lists/lock"
-chmod 0640 "${WORK_DIR}/var/lib/apt/lists/lock"
+find "${TMPFS_DIR}/var/lib/apt/lists" -type f -print0 | xargs -0 rm -f
+touch "${TMPFS_DIR}/var/lib/apt/lists/lock"
+chmod 0640 "${TMPFS_DIR}/var/lib/apt/lists/lock"
 
 # Remote Apt Speed Up
-rm -f "${WORK_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
+rm -f "${TMPFS_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
 
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ]; then
 	# Workaround policy-rc.d
-	rm -f "${WORK_DIR}/usr/sbin/policy-rc.d"
+	rm -f "${TMPFS_DIR}/usr/sbin/policy-rc.d"
 
 	# Workaround initctl
-	rm -f "${WORK_DIR}/sbin/initctl"
-	chroot "${WORK_DIR}" dpkg-divert --rename --remove /sbin/initctl
+	rm -f "${TMPFS_DIR}/sbin/initctl"
+	chroot "${TMPFS_DIR}" dpkg-divert --rename --remove /sbin/initctl
 fi
 
 ################################################################################
@@ -658,10 +661,10 @@ fi
 ################################################################################
 
 # Unmount Partition
-awk '{print $2}' /proc/mounts | grep -s "${WORK_DIR}/" | sort -r | xargs --no-run-if-empty umount
+awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}/" | sort -r | xargs --no-run-if-empty umount
 
 # Copy RootFs Files
-tar --acls --xattrs --one-file-system -cpf - -C ${WORK_DIR} . | tar --acls --xattrs -xpf - -C ${GRUB_DIR}
+tar --acls --xattrs --one-file-system -cpf - -C ${TMPFS_DIR} . | tar --acls --xattrs -xpf - -C ${GRUB_DIR}
 
 # Mount Partition
 mount -t devtmpfs                   devtmpfs "${GRUB_DIR}/dev"
@@ -681,14 +684,15 @@ chroot "${GRUB_DIR}" grub-install --target=x86_64-efi --efi-directory=/boot/efi 
 chroot "${GRUB_DIR}" grub-mkconfig -o /boot/grub/grub.cfg
 
 # Unmount Partition
-awk '{print $2}' /proc/mounts | grep -s "${WORK_DIR}" | sort -r | xargs --no-run-if-empty umount
+awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
 awk '{print $2}' /proc/mounts | grep -s "${GRUB_DIR}" | sort -r | xargs --no-run-if-empty umount
 
 # Disconnect Disk Image
 qemu-nbd -d "${BLOCK_DEV}" > /dev/null
 
 # Compressed Disk Image
-qemu-img convert -c -f qcow2 -O qcow2 "box.img" "${BUILD_DIR}/box.img"
+mkdir -p "${BUILD_DIR}"
+qemu-img convert -c -f qcow2 -O qcow2 "${WORK_DIR}/box.img" "${BUILD_DIR}/box.img"
 
 ################################################################################
 # Vagrant Boxes
