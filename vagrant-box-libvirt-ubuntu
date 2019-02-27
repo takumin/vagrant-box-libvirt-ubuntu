@@ -344,8 +344,7 @@ if [ "${RELEASE}" = 'trusty' ]; then
 	chroot "${WORK_DIR}" ln -fs /bin/true /sbin/initctl
 
 	# Workaround utmp
-	touch "${WORK_DIR}/var/run/utmp"
-	chroot "${WORK_DIR}" chown root:utmp /var/run/utmp
+	chroot "${WORK_DIR}" touch /var/run/utmp
 fi
 
 ################################################################################
