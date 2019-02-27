@@ -694,8 +694,10 @@ chmod 1777 "${GRUB_DIR}/dev/shm"
 
 # Check Architecture
 if [ "${ARCH}" = 'amd64' ]; then
-	# Install BIOS/UEFI Boot Recode
+	# Install BIOS Boot Recode
 	chroot "${GRUB_DIR}" grub-install --target=i386-pc --recheck "${BLOCK_DEV}"
+
+	# Install UEFI Boot Recode
 	chroot "${GRUB_DIR}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --no-nvram --recheck
 fi
 
