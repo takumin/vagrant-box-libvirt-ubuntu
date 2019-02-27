@@ -251,6 +251,7 @@ mkdir -p "${BUILD_DIR}"
 
 # Unmount Root Partition
 awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
+awk '{print $2}' /proc/mounts | grep -s "${GRUB_DIR}" | sort -r | xargs --no-run-if-empty umount
 
 # Disconnect Disk Image
 qemu-nbd -d "${BLOCK_DEV}" > /dev/null
