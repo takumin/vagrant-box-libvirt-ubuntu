@@ -263,7 +263,7 @@ qemu-nbd -d "${BLOCK_DEV}" > /dev/null
 mount -t tmpfs -o 'mode=0755' tmpfs "${TMPFS_DIR}"
 
 # Create Disk Image
-qemu-img create -q -f qcow2 "${WORK_DIR}/box.img" 32G
+qemu-img create -q -f qcow2 "${WORK_DIR}/box.img" 16G
 
 # Connect Disk Image
 qemu-nbd -c "${BLOCK_DEV}" "${WORK_DIR}/box.img"
@@ -479,6 +479,16 @@ if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 	# Install Package
 	chroot "${TMPFS_DIR}" apt-get -qq --no-install-recommends install network-manager
 
+	# Default Interface
+	echo 'allow-hotplug eth0'   >  "${TMPFS_DIR}/etc/network/interfaces.d/eth0"
+	echo 'iface eth0 inet dhcp' >> "${TMPFS_DIR}/etc/network/interfaces.d/eth0"
+	echo 'allow-hotplug eth1'   >  "${TMPFS_DIR}/etc/network/interfaces.d/eth1"
+	echo 'iface eth1 inet dhcp' >> "${TMPFS_DIR}/etc/network/interfaces.d/eth1"
+	echo 'allow-hotplug eth2'   >  "${TMPFS_DIR}/etc/network/interfaces.d/eth2"
+	echo 'iface eth2 inet dhcp' >> "${TMPFS_DIR}/etc/network/interfaces.d/eth2"
+	echo 'allow-hotplug eth3'   >  "${TMPFS_DIR}/etc/network/interfaces.d/eth3"
+	echo 'iface eth3 inet dhcp' >> "${TMPFS_DIR}/etc/network/interfaces.d/eth3"
+
 	# Managed Interface
 	sed -i -e 's@source-directory.*@source /etc/network/interfaces.d/\*@' "${TMPFS_DIR}/etc/network/interfaces"
 	sed -i -e 's/managed=.*/managed=true/;' "${TMPFS_DIR}/etc/NetworkManager/NetworkManager.conf"
@@ -607,17 +617,24 @@ __EOF__
 chroot "${TMPFS_DIR}" systemctl enable ssh-keygen.service
 
 ################################################################################
+# Rsync
+################################################################################
+
+# Require Package
+chroot "${TMPFS_DIR}" apt-get -qq install rsync
+
+################################################################################
 # Boot
 ################################################################################
 
-# Grub Boot Loader
+# Require Package
 chroot "${TMPFS_DIR}" apt-get -qq install grub2 grub-pc-bin grub-efi-amd64-bin
 
 # Minimal Timeout
 sed -i -e 's@^GRUB_TIMEOUT=.*$@GRUB_TIMEOUT=0@' "${TMPFS_DIR}/etc/default/grub"
 
 # Default Text Console
-sed -i -e 's@^GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"$@GRUB_CMDLINE_LINUX_DEFAULT="quiet"@' "${TMPFS_DIR}/etc/default/grub"
+sed -i -e 's@^GRUB_CMDLINE_LINUX_DEFAULT=.*$@GRUB_CMDLINE_LINUX_DEFAULT="quiet biosdevname=0 net.ifnames=0"@' "${TMPFS_DIR}/etc/default/grub"
 
 ################################################################################
 # Initramfs
@@ -713,7 +730,11 @@ __EOF__
 
 # Create Vagrant Metadata File
 cat > "${BUILD_DIR}/metadata.json" << '__EOF__'
-{"format":"qcow2","provider":"libvirt","virtual_size":16}
+{
+  "provider": "libvirt",
+  "format": "qcow2",
+  "virtual_size": 16
+}
 __EOF__
 
 # Create Vagrant Boxes
