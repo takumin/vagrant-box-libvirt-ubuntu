@@ -91,6 +91,11 @@ set -eu
 # shellcheck disable=SC2086
 : ${APT_PROXY_PORT:=''}
 
+# Working Directory
+# Values: String
+# shellcheck disable=SC2086
+: ${WORK_DIR:="/run/vagrant"}
+
 ################################################################################
 # Available Environment
 ################################################################################
@@ -164,17 +169,14 @@ esac
 # Require Environment
 ################################################################################
 
-# Working Directory
-WORK_DIR="/run/vagrant"
-
 # Tmpfs Root Filesystem Mount Point
-TMPFS_DIR="/run/vagrant/rootfs"
+TMPFS_DIR="${WORK_DIR}/root"
 
 # Grub Bootloader Mount Point
-GRUB_DIR="/run/vagrant/grub"
+GRUB_DIR="${WORK_DIR}/grub"
 
 # Vagrant Box Build Directory
-BUILD_DIR="/run/vagrant/box"
+BUILD_DIR="${WORK_DIR}/box"
 
 # Qemu Block Device Path
 BLOCK_DEV="/dev/nbd0"
@@ -237,6 +239,12 @@ dpkg -l | awk '{print $2}' | grep -qs '^e2fsprogs$'   || apt-get -qq --no-instal
 dpkg -l | awk '{print $2}' | grep -qs '^pixz$'        || apt-get -qq --no-install-recommends install pixz
 dpkg -l | awk '{print $2}' | grep -qs '^debootstrap$' || apt-get -qq --no-install-recommends install debootstrap
 
+# Working Directory
+mkdir -p "${WORK_DIR}"
+mkdir -p "${TMPFS_DIR}"
+mkdir -p "${GRUB_DIR}"
+mkdir -p "${BUILD_DIR}"
+
 ################################################################################
 # Cleanup
 ################################################################################
@@ -252,11 +260,9 @@ qemu-nbd -d "${BLOCK_DEV}" > /dev/null
 ################################################################################
 
 # Mount Root File System Partition
-mkdir -p "${TMPFS_DIR}"
 mount -t tmpfs -o 'mode=0755' tmpfs "${TMPFS_DIR}"
 
 # Create Disk Image
-mkdir -p "${WORK_DIR}"
 qemu-img create -q -f qcow2 "${WORK_DIR}/box.img" 32G
 
 # Connect Disk Image
@@ -284,7 +290,6 @@ mkfs.vfat -F 32 -n "ESP" "${BLOCK_DEV}p2"
 mkfs.ext4 -E nodiscard -L "Root" "${BLOCK_DEV}p3"
 
 # Mount Partition
-mkdir -p "${GRUB_DIR}"
 mount "${BLOCK_DEV}p3" "${GRUB_DIR}"
 
 # Mount EFI System Partition
@@ -691,7 +696,6 @@ awk '{print $2}' /proc/mounts | grep -s "${GRUB_DIR}" | sort -r | xargs --no-run
 qemu-nbd -d "${BLOCK_DEV}" > /dev/null
 
 # Compressed Disk Image
-mkdir -p "${BUILD_DIR}"
 qemu-img convert -c -f qcow2 -O qcow2 "${WORK_DIR}/box.img" "${BUILD_DIR}/box.img"
 
 ################################################################################
