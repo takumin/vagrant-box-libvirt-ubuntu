@@ -740,6 +740,12 @@ __EOF__
 # Create Vagrant Boxes
 tar -cvf "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box" -C "${BUILD_DIR}" -I pixz .
 
+# Check Sudoers
+if [ -n "${SUDO_UID}" ] && [ -n "${SUDO_GID}" ]; then
+	# Permission Vagrant Boxes
+	chown "${SUDO_UID}:${SUDO_GID}" "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box"
+fi
+
 ################################################################################
 # Infomation
 ################################################################################
