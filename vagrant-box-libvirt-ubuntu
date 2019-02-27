@@ -453,8 +453,11 @@ chroot "${WORK_DIR}" apt-get -qq install ubuntu-standard
 # Systemd
 ################################################################################
 
-# Install Package
-chroot "${WORK_DIR}" apt-get -qq install systemd
+# Check Release Version
+if [ "${RELEASE}" = 'trusty' ]; then
+	# Install Package
+	chroot "${WORK_DIR}" apt-get -qq install systemd
+fi
 
 ################################################################################
 # Network
@@ -644,6 +647,7 @@ rm -f "${WORK_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
 if [ "${RELEASE}" = 'trusty' ]; then
 	# Workaround policy-rc.d
 	rm -f "${WORK_DIR}/usr/sbin/policy-rc.d"
+
 	# Workaround initctl
 	rm -f "${WORK_DIR}/sbin/initctl"
 	chroot "${WORK_DIR}" dpkg-divert --rename --remove /sbin/initctl
