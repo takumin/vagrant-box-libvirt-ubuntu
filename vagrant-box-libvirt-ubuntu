@@ -442,6 +442,13 @@ chroot "${WORK_DIR}" apt-get -qq install ubuntu-minimal
 chroot "${WORK_DIR}" apt-get -qq install ubuntu-standard
 
 ################################################################################
+# Systemd
+################################################################################
+
+# Install Package
+chroot "${WORK_DIR}" apt-get -qq install systemd
+
+################################################################################
 # Network
 ################################################################################
 
@@ -691,3 +698,6 @@ __EOF__
 
 # Create Vagrant Boxes
 tar -cvf "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box" -C "${BUILD_DIR}" -I pixz .
+
+# Infomation Vagrant Boxes
+ls -lah "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box"
