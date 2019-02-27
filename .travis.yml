@@ -19,3 +19,13 @@ env:
     - RELEASE="bionic"
 script:
   - sudo ./vagrant-box-libvirt-ubuntu
+deploy:
+  provider: releases
+  api_key:
+    secure: "Ag1wLN3sjl8RVqDeOtUjxzY8qTj/Q5zR5YS3gHhWck+CRWkxYqA2vvRciV3keJyQC/E4JvXOq6bvkzhcjZ64yrJVnAfgpI/sUcD0W18cwaRUIcBgKmUqySpSdcYAn2rpX0wsdL9xheJ+uGwBtKw4xY1XinFYxrklR974KcvmQM4zq+MbSQzozSDto6s+MwdkFwp/3q08+mgfrnIQfa9653/Hto2FxKYcmXZvMKwcaYbC2n6zo6FChLtiYef7i3U+2V63tBx1InLLcgYI8ItrkpyI/ILwc74LsvTXj0/f0DCc7aNnVGJQtazIlybPL1C/PYUYI5MkcgvGo/2EsjLrmTqoZ4tK4k5TLqUiQhLTmttFuMZRsNOZKou/MqF6ulUanmTMYBOgHgMFgDSJoh19iP1hpebewlXbkV7rHqlnDdjQ4TPTYvH6xM5EFPDRENBXAAnCWbQkKhur14FveEVPlPDNTe8QQX3zxV4qD/9l1wHfP19WwyzzVl0Z2CKB5W8XF7VcRQuvyLcN/GZHK2ei1oX2PAUXSixTAiTE5i6U8ys4Kbjlwp++lTd3bcHB/R8H9cCuF1h1Wufg8UWq2Z9D6XEdQ/qJ6KYhlMXFbbYT+NTwtQs658qRKEXNORgyyitLHllkyDCs+jpCu7kQsE9bM9eDxydEoyNOjcRVQhlVWFU="
+  file_glob: true
+  file: '*.box'
+  skip_cleanup: true
+  on:
+    tags: true
+    all_branches: true
