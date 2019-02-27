@@ -632,6 +632,7 @@ chroot "${TMPFS_DIR}" apt-get -qq install grub2 grub-pc-bin grub-efi-amd64-bin
 
 # Minimal Timeout
 sed -i -e 's@^GRUB_TIMEOUT=.*$@GRUB_TIMEOUT=0@' "${TMPFS_DIR}/etc/default/grub"
+sed -i -e 's@^GRUB_HIDDEN_TIMEOUT=.*$@GRUB_HIDDEN_TIMEOUT=0@' "${TMPFS_DIR}/etc/default/grub"
 
 # Default Text Console
 sed -i -e 's@^GRUB_CMDLINE_LINUX_DEFAULT=.*$@GRUB_CMDLINE_LINUX_DEFAULT="quiet biosdevname=0 net.ifnames=0"@' "${TMPFS_DIR}/etc/default/grub"
@@ -704,6 +705,10 @@ chroot "${GRUB_DIR}" grub-install --target=x86_64-efi --efi-directory=/boot/efi 
 
 # Create Grub Config File
 chroot "${GRUB_DIR}" grub-mkconfig -o /boot/grub/grub.cfg
+
+# Workaround Fix Boot
+sed -i -e "s@${BLOCK_DEV##*/}p2@sda2@" "${GRUB_DIR}/boot/grub/grub.cfg"
+sed -i -e "s@${BLOCK_DEV##*/}p3@sda3@" "${GRUB_DIR}/boot/grub/grub.cfg"
 
 # Unmount Partition
 awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
