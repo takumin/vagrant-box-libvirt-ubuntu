@@ -718,8 +718,7 @@ insmod gzio
 
 insmod font
 
-if loadfont \${prefix}/fonts/unicode.pf2
-then
+if loadfont \${prefix}/fonts/unicode.pf2; then
 	insmod gfxterm
 	set gfxmode=auto
 	set gfxpayload=keep
