@@ -631,10 +631,10 @@ chroot "${TMPFS_DIR}" apt-get -qq install rsync
 chroot "${TMPFS_DIR}" apt-get -qq install grub2 grub-pc-bin grub-efi-amd64-bin
 
 # Minimal Timeout
-sed -i -e 's@^GRUB_TIMEOUT=.*$@GRUB_TIMEOUT=0@' "${TMPFS_DIR}/etc/default/grub"
-sed -i -e 's@^GRUB_HIDDEN_TIMEOUT=.*$@GRUB_HIDDEN_TIMEOUT=0@' "${TMPFS_DIR}/etc/default/grub"
+# sed -i -e 's@^GRUB_TIMEOUT=.*$@GRUB_TIMEOUT=0@' "${TMPFS_DIR}/etc/default/grub"
+# sed -i -e 's@^GRUB_HIDDEN_TIMEOUT=.*$@GRUB_HIDDEN_TIMEOUT=1@' "${TMPFS_DIR}/etc/default/grub"
 
-# Default Text Console
+# Text Console & Network Interface Name
 sed -i -e 's@^GRUB_CMDLINE_LINUX_DEFAULT=.*$@GRUB_CMDLINE_LINUX_DEFAULT="quiet biosdevname=0 net.ifnames=0"@' "${TMPFS_DIR}/etc/default/grub"
 
 ################################################################################
@@ -687,7 +687,7 @@ fi
 awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}/" | sort -r | xargs --no-run-if-empty umount
 
 # Copy RootFs Files
-tar --acls --xattrs --one-file-system -cpf - -C ${TMPFS_DIR} . | tar --acls --xattrs -xpf - -C ${GRUB_DIR}
+tar --acls --xattrs --one-file-system -cpf - -C "${TMPFS_DIR}" . | tar --acls --xattrs -xpf - -C "${GRUB_DIR}"
 
 # Mount Partition
 mount -t devtmpfs                   devtmpfs "${GRUB_DIR}/dev"
@@ -707,8 +707,7 @@ chroot "${GRUB_DIR}" grub-install --target=x86_64-efi --efi-directory=/boot/efi 
 chroot "${GRUB_DIR}" grub-mkconfig -o /boot/grub/grub.cfg
 
 # Workaround Fix Boot
-sed -i -e "s@${BLOCK_DEV##*/}p2@sda2@" "${GRUB_DIR}/boot/grub/grub.cfg"
-sed -i -e "s@${BLOCK_DEV##*/}p3@sda3@" "${GRUB_DIR}/boot/grub/grub.cfg"
+sed -i -e "s@root=${BLOCK_DEV}p3@root=UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p3)@" "${GRUB_DIR}/boot/grub/grub.cfg"
 
 # Unmount Partition
 awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
