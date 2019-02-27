@@ -630,13 +630,6 @@ chroot "${TMPFS_DIR}" apt-get -qq install rsync
 # Require Package
 chroot "${TMPFS_DIR}" apt-get -qq install grub2 grub-pc-bin grub-efi-amd64-bin
 
-# Minimal Timeout
-# sed -i -e 's@^GRUB_TIMEOUT=.*$@GRUB_TIMEOUT=0@' "${TMPFS_DIR}/etc/default/grub"
-# sed -i -e 's@^GRUB_HIDDEN_TIMEOUT=.*$@GRUB_HIDDEN_TIMEOUT=1@' "${TMPFS_DIR}/etc/default/grub"
-
-# Text Console & Network Interface Name
-# sed -i -e 's@^GRUB_CMDLINE_LINUX_DEFAULT=.*$@GRUB_CMDLINE_LINUX_DEFAULT="quiet biosdevname=0 net.ifnames=0"@' "${TMPFS_DIR}/etc/default/grub"
-
 ################################################################################
 # Initramfs
 ################################################################################
@@ -736,16 +729,10 @@ set timeout=0
 
 menuentry 'ubuntu' {
 	search --no-floppy --fs-uuid --set=root $(blkid -o value -s UUID ${BLOCK_DEV}p3)
-	linux  /vmlinuz root=UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p3) ro quiet biosdevname=0 net.ifnames=0
+	linux  /vmlinuz root=UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p3) ro biosdevname=0 net.ifnames=0
 	initrd /initrd.img
 }
 __EOF__
-
-# Create Grub Config File
-# chroot "${GRUB_DIR}" grub-mkconfig -o /boot/grub/grub.cfg
-
-# Workaround Fix Boot
-# sed -i -e "s@root=${BLOCK_DEV}p3@root=UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p3)@" "${GRUB_DIR}/boot/grub/grub.cfg"
 
 # Unmount Partition
 awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
