@@ -227,12 +227,12 @@ esac
 lsmod | grep -qs nbd || modprobe nbd
 
 # Install Required Packages
-dpkg -l | awk '{print $2}' | grep -qs '^qemu$'        || apt-get -y --no-install-recommends install qemu
-dpkg -l | awk '{print $2}' | grep -qs '^gdisk$'       || apt-get -y --no-install-recommends install gdisk
-dpkg -l | awk '{print $2}' | grep -qs '^dosfstools$'  || apt-get -y --no-install-recommends install dosfstools
-dpkg -l | awk '{print $2}' | grep -qs '^e2fsprogs$'   || apt-get -y --no-install-recommends install e2fsprogs
-dpkg -l | awk '{print $2}' | grep -qs '^pixz$'        || apt-get -y --no-install-recommends install pixz
-dpkg -l | awk '{print $2}' | grep -qs '^debootstrap$' || apt-get -y --no-install-recommends install debootstrap
+dpkg -l | awk '{print $2}' | grep -qs '^qemu$'        || apt-get -qq --no-install-recommends install qemu
+dpkg -l | awk '{print $2}' | grep -qs '^gdisk$'       || apt-get -qq --no-install-recommends install gdisk
+dpkg -l | awk '{print $2}' | grep -qs '^dosfstools$'  || apt-get -qq --no-install-recommends install dosfstools
+dpkg -l | awk '{print $2}' | grep -qs '^e2fsprogs$'   || apt-get -qq --no-install-recommends install e2fsprogs
+dpkg -l | awk '{print $2}' | grep -qs '^pixz$'        || apt-get -qq --no-install-recommends install pixz
+dpkg -l | awk '{print $2}' | grep -qs '^debootstrap$' || apt-get -qq --no-install-recommends install debootstrap
 
 ################################################################################
 # Cleanup
@@ -412,17 +412,17 @@ __EOF__
 ################################################################################
 
 # Update Repository
-chroot "${WORK_DIR}" apt-get -y update
+chroot "${WORK_DIR}" apt-get -qq update
 
 # Upgrade System
-chroot "${WORK_DIR}" apt-get -y dist-upgrade
+chroot "${WORK_DIR}" apt-get -qq dist-upgrade
 
 ################################################################################
 # Kernel
 ################################################################################
 
 # Install Kernel
-chroot "${WORK_DIR}" apt-get -y --no-install-recommends install "${KERNEL_IMAGE_PACKAGE}"
+chroot "${WORK_DIR}" apt-get -qq --no-install-recommends install "${KERNEL_IMAGE_PACKAGE}"
 
 # Get Kernel Version
 KERNEL_VERSION="$(chroot "${WORK_DIR}" dpkg -l | awk '{print $2}' | grep -E 'linux-image-[0-9\.-]+-generic' | sed -E 's/linux-image-//')"
@@ -432,21 +432,14 @@ KERNEL_VERSION="$(chroot "${WORK_DIR}" dpkg -l | awk '{print $2}' | grep -E 'lin
 ################################################################################
 
 # Minimal Package
-chroot "${WORK_DIR}" apt-get -y install ubuntu-minimal
+chroot "${WORK_DIR}" apt-get -qq install ubuntu-minimal
 
 ################################################################################
 # Standard
 ################################################################################
 
 # Install Package
-chroot "${WORK_DIR}" apt-get -y install ubuntu-standard
-
-################################################################################
-# Server
-################################################################################
-
-# Install Package
-chroot "${WORK_DIR}" apt-get -y install ubuntu-server
+chroot "${WORK_DIR}" apt-get -qq install ubuntu-standard
 
 ################################################################################
 # Network
@@ -454,8 +447,11 @@ chroot "${WORK_DIR}" apt-get -y install ubuntu-server
 
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
+	# Install Require Packages
+	chroot "${WORKDIR}" apt-get -qq install ethtool ifenslave
+
 	# Install Package
-	chroot "${WORK_DIR}" apt-get -y --no-install-recommends install network-manager
+	chroot "${WORK_DIR}" apt-get -qq --no-install-recommends install network-manager
 
 	# Managed Interface
 	sed -i -e 's@source-directory.*@source /etc/network/interfaces.d/\*@' "${WORK_DIR}/etc/network/interfaces"
@@ -465,7 +461,7 @@ fi
 # Check Release Version
 if [ "${RELEASE}" = 'xenial' ] || [ "${RELEASE}" = 'bionic' ]; then
 	# Install Package
-	chroot "${WORK_DIR}" apt-get -y install nplan
+	chroot "${WORK_DIR}" apt-get -qq install nplan
 fi
 
 ################################################################################
@@ -473,7 +469,7 @@ fi
 ################################################################################
 
 # Require Package
-chroot "${WORK_DIR}" apt-get -y install cloud-initramfs-copymods cloud-initramfs-dyn-netconf cloud-initramfs-rooturl
+chroot "${WORK_DIR}" apt-get -qq install cloud-initramfs-copymods cloud-initramfs-dyn-netconf cloud-initramfs-rooturl overlayroot
 
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
@@ -506,7 +502,7 @@ fi
 chroot "${WORK_DIR}" sh -c "echo 'cloud-init cloud-init/datasources multiselect ${DATASOURCES}' | debconf-set-selections"
 
 # Require Package
-chroot "${WORK_DIR}" apt-get -y install cloud-init
+chroot "${WORK_DIR}" apt-get -qq install cloud-init
 
 # Generate Network Config from MetaData Server
 cat > "${WORK_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zz-clear-network-interfaces" <<- '__EOF__'
@@ -548,7 +544,7 @@ chmod 0755 "${WORK_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zz-clear-n
 ################################################################################
 
 # Require Package
-chroot "${WORK_DIR}" apt-get -y install ssh
+chroot "${WORK_DIR}" apt-get -qq install ssh
 
 # Configure OpenSSH Server
 echo ''          >> "${WORK_DIR}/etc/ssh/sshd_config"
@@ -589,7 +585,7 @@ chroot "${WORK_DIR}" systemctl enable ssh-keygen.service
 ################################################################################
 
 # Grub Boot Loader
-chroot "${WORK_DIR}" apt-get -y install grub-pc-bin grub-efi-amd64-bin
+chroot "${WORK_DIR}" apt-get -qq install grub2 grub-pc-bin grub-efi-amd64-bin
 
 ################################################################################
 # Initramfs
@@ -610,10 +606,10 @@ rm -f "${WORK_DIR}/vmlinuz.old"
 rm -f "${WORK_DIR}/initrd.img.old"
 
 # Out Of Packages
-chroot "${WORK_DIR}" apt-get -y autoremove --purge
+chroot "${WORK_DIR}" apt-get -qq autoremove --purge
 
 # Package Archive
-chroot "${WORK_DIR}" apt-get -y clean
+chroot "${WORK_DIR}" apt-get -qq clean
 
 # Repository List
 find "${WORK_DIR}/var/lib/apt/lists" -type f -print0 | xargs -0 rm -f
