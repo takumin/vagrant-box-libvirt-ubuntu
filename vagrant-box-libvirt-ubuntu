@@ -813,4 +813,4 @@ fi
 echo '#'
 echo '# Vagrant Box Status'
 echo '#'
-ls -lah "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box"
+ls -lah "ubuntu-${ARCH}-${RELEASE}-libvirt.box"
