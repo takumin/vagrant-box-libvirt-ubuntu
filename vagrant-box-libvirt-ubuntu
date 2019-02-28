@@ -562,7 +562,7 @@ if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 	chmod 0755 "${TMPFS_DIR}/usr/share/initramfs-tools/hooks/libnss_dns"
 
 	# Generate Reset Network Interface for Initramfs
-	cat > "${WORKDIR}/usr/share/initramfs-tools/scripts/init-bottom/zzz-reset-network-interfaces" <<- '__EOF__'
+	cat > "${TMPFS_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zzz-reset-network-interfaces" <<- '__EOF__'
 	#!/bin/sh
 
 	PREREQ=""
@@ -583,7 +583,7 @@ if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 	__EOF__
 
 	# Execute Permission
-	chmod 0755 "${WORKDIR}/usr/share/initramfs-tools/scripts/init-bottom/zzz-reset-network-interfaces"
+	chmod 0755 "${TMPFS_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zzz-reset-network-interfaces"
 fi
 
 ################################################################################
