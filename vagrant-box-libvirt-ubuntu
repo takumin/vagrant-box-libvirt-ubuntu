@@ -411,12 +411,6 @@ fi
 # User Dir Permission
 chroot "${TMPFS_DIR}" chown -R "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}"
 
-# Sudoers
-echo "# Vagrant User"                       >  "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
-echo "Defaults:${USER_NAME} visiblepw"      >> "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
-echo "${USER_NAME} ALL=(ALL) NOPASSWD: ALL" >> "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
-chmod 440 "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
-
 ################################################################################
 # Repository
 ################################################################################
@@ -473,6 +467,19 @@ if [ "${RELEASE}" = 'trusty' ]; then
 	# Install Package
 	chroot "${TMPFS_DIR}" apt-get -qq install systemd
 fi
+
+################################################################################
+# Sudoers
+################################################################################
+
+# Install Package
+chroot "${TMPFS_DIR}" apt-get -qq install sudo
+
+# Not Require Terminal & No Password
+echo "# Vagrant User"                       >  "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
+echo "Defaults:${USER_NAME} visiblepw"      >> "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
+echo "${USER_NAME} ALL=(ALL) NOPASSWD: ALL" >> "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
+chmod 440 "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
 
 ################################################################################
 # Network
