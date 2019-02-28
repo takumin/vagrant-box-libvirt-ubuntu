@@ -793,16 +793,16 @@ cat > "${BUILD_DIR}/metadata.json" << '__EOF__'
 __EOF__
 
 # Create Vagrant Boxes
-tar -cvf "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box" -C "${BUILD_DIR}" -I pixz .
+tar -cvf "ubuntu-${ARCH}-${RELEASE}-libvirt.box" -C "${BUILD_DIR}" -I pixz .
 
 # Create SHA256 Checksum
-sha256sum "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box" > "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box.sha256"
+sha256sum "ubuntu-${ARCH}-${RELEASE}-libvirt.box" > "ubuntu-${ARCH}-${RELEASE}-libvirt.box.sha256"
 
 # Check Sudoers
 if [ -n "${SUDO_UID}" ] && [ -n "${SUDO_GID}" ]; then
 	# Permission Vagrant Boxes
-	chown "${SUDO_UID}:${SUDO_GID}" "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box"
-	chown "${SUDO_UID}:${SUDO_GID}" "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box.sha256"
+	chown "${SUDO_UID}:${SUDO_GID}" "ubuntu-${ARCH}-${RELEASE}-libvirt.box"
+	chown "${SUDO_UID}:${SUDO_GID}" "ubuntu-${ARCH}-${RELEASE}-libvirt.box.sha256"
 fi
 
 ################################################################################
