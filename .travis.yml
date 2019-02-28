@@ -11,7 +11,6 @@ addons:
     - debootstrap
 env:
   global:
-    - WORK_DIR="/vagrant"
     - MIRROR_UBUNTU="http://us-east-1.ec2.archive.ubuntu.com/ubuntu"
   matrix:
     - RELEASE="trusty"

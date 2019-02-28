@@ -94,7 +94,7 @@ set -eu
 # Working Directory
 # Values: String
 # shellcheck disable=SC2086
-: ${WORK_DIR:="/run/vagrant"}
+: ${WORK_DIR:="/tmp/vagrant"}
 
 ################################################################################
 # Available Environment
