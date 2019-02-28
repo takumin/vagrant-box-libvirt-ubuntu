@@ -499,6 +499,24 @@ fi
 if [ "${RELEASE}" = 'xenial' ] || [ "${RELEASE}" = 'bionic' ]; then
 	# Install Package
 	chroot "${TMPFS_DIR}" apt-get -qq install nplan
+
+	# Default Interface
+	echo 'network:'             >  "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '  version: 2'         >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '  renderer: networkd' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '  ethernets:'         >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '    eth0:'            >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '      dhcp4: true'    >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '      optional: true' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '    eth1:'            >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '      dhcp4: true'    >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '      optional: true' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '    eth2:'            >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '      dhcp4: true'    >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '      optional: true' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '    eth3:'            >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '      dhcp4: true'    >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	echo '      optional: true' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
 fi
 
 ################################################################################
