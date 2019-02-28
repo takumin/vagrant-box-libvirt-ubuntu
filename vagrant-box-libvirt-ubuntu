@@ -411,6 +411,10 @@ fi
 # User Dir Permission
 chroot "${TMPFS_DIR}" chown -R "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}"
 
+# Sudoers
+echo "${USER_NAME} ALL=(ALL) NOPASSWD: ALL" > "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
+chmod 440 "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
+
 ################################################################################
 # Repository
 ################################################################################
