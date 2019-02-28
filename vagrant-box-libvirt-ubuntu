@@ -795,10 +795,14 @@ __EOF__
 # Create Vagrant Boxes
 tar -cvf "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box" -C "${BUILD_DIR}" -I pixz .
 
+# Create SHA256 Checksum
+sha256sum "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box" > "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box.sha256"
+
 # Check Sudoers
 if [ -n "${SUDO_UID}" ] && [ -n "${SUDO_GID}" ]; then
 	# Permission Vagrant Boxes
 	chown "${SUDO_UID}:${SUDO_GID}" "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box"
+	chown "${SUDO_UID}:${SUDO_GID}" "ubuntu-${ARCH}-${RELEASE}-${KERNEL}.box.sha256"
 fi
 
 ################################################################################
