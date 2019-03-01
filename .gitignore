@@ -1,4 +1,5 @@
 *.box
 *.img
+*.sha256
 .envrc
 .vagrant/
