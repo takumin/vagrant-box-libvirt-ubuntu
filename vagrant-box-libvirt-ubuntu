@@ -494,14 +494,17 @@ if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 	chroot "${TMPFS_DIR}" apt-get -qq --no-install-recommends install network-manager
 
 	# Default Interface
-	echo 'allow-hotplug eth0'   >  "${TMPFS_DIR}/etc/network/interfaces.d/eth0"
-	echo 'iface eth0 inet dhcp' >> "${TMPFS_DIR}/etc/network/interfaces.d/eth0"
-	echo 'allow-hotplug eth1'   >  "${TMPFS_DIR}/etc/network/interfaces.d/eth1"
-	echo 'iface eth1 inet dhcp' >> "${TMPFS_DIR}/etc/network/interfaces.d/eth1"
-	echo 'allow-hotplug eth2'   >  "${TMPFS_DIR}/etc/network/interfaces.d/eth2"
-	echo 'iface eth2 inet dhcp' >> "${TMPFS_DIR}/etc/network/interfaces.d/eth2"
-	echo 'allow-hotplug eth3'   >  "${TMPFS_DIR}/etc/network/interfaces.d/eth3"
-	echo 'iface eth3 inet dhcp' >> "${TMPFS_DIR}/etc/network/interfaces.d/eth3"
+	touch "${TMPFS_DIR}/etc/network/interfaces.d/vagrant"
+	{
+		echo 'allow-hotplug eth0'
+		echo 'iface eth0 inet dhcp'
+		echo 'allow-hotplug eth1'
+		echo 'iface eth1 inet dhcp'
+		echo 'allow-hotplug eth2'
+		echo 'iface eth2 inet dhcp'
+		echo 'allow-hotplug eth3'
+		echo 'iface eth3 inet dhcp'
+	} >> "${TMPFS_DIR}/etc/network/interfaces.d/vagrant"
 
 	# Managed Interface
 	sed -i -e 's@source-directory.*@source /etc/network/interfaces.d/\*@' "${TMPFS_DIR}/etc/network/interfaces"
@@ -514,22 +517,25 @@ if [ "${RELEASE}" = 'xenial' ] || [ "${RELEASE}" = 'bionic' ]; then
 	chroot "${TMPFS_DIR}" apt-get -qq install nplan
 
 	# Default Interface
-	echo 'network:'             >  "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '  version: 2'         >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '  renderer: networkd' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '  ethernets:'         >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '    eth0:'            >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '      dhcp4: true'    >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '      optional: true' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '    eth1:'            >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '      dhcp4: true'    >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '      optional: true' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '    eth2:'            >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '      dhcp4: true'    >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '      optional: true' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '    eth3:'            >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '      dhcp4: true'    >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
-	echo '      optional: true' >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	touch "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	{
+		echo 'network:'
+		echo '  version: 2'
+		echo '  renderer: networkd'
+		echo '  ethernets:'
+		echo '    eth0:'
+		echo '      dhcp4: true'
+		echo '      optional: true'
+		echo '    eth1:'
+		echo '      dhcp4: true'
+		echo '      optional: true'
+		echo '    eth2:'
+		echo '      dhcp4: true'
+		echo '      optional: true'
+		echo '    eth3:'
+		echo '      dhcp4: true'
+		echo '      optional: true'
+	} >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
 fi
 
 ################################################################################
