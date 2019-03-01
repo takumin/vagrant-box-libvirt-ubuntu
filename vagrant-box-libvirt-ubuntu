@@ -819,5 +819,5 @@ fi
 echo '#'
 echo '# Vagrant Box Status'
 echo '#'
-ls -lah "*.box"
-ls -lah "*.sha256"
+ls -lah "ubuntu-${ARCH}-${RELEASE}-libvirt.box"
+ls -lah "ubuntu-${ARCH}-${RELEASE}-libvirt.box.sha256"
