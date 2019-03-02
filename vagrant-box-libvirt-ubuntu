@@ -654,7 +654,7 @@ chroot "${TMPFS_DIR}" apt-get -qq install rsync
 ################################################################################
 
 # Require Package
-chroot "${TMPFS_DIR}" apt-get -qq install grub2 grub-pc-bin grub-efi-amd64-bin
+chroot "${TMPFS_DIR}" apt-get -qq install grub2-common grub-pc-bin grub-efi-amd64-bin
 
 ################################################################################
 # Initramfs
