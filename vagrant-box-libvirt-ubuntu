@@ -161,8 +161,7 @@ fi
 
 # Select Kernel Package
 case "${RELEASE}-${KERNEL}" in
-	"bionic-virtual-hwe"        ) KERNEL="virtual" ;;
-	*                           ) ;;
+	* ) ;;
 esac
 
 ################################################################################
@@ -221,7 +220,7 @@ case "${RELEASE}-${KERNEL}" in
 	"bionic-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
 	"trusty-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-lts-xenial" ;;
 	"xenial-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-16.04" ;;
-	"bionic-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
+	"bionic-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-18.04" ;;
 esac
 
 ################################################################################
