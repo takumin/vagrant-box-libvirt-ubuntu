@@ -29,13 +29,6 @@ set -eu
 # shellcheck disable=SC2086
 : ${KERNEL:='virtual'}
 
-# Cloud-Init Datasources
-# Values:
-#   - NoCloud
-#   - None
-# shellcheck disable=SC2086
-: ${DATASOURCES:='NoCloud'}
-
 # User - Name
 # Values: String
 # shellcheck disable=SC2086
@@ -154,15 +147,6 @@ if [ "${RETVAL}" != 0 ]; then
 	echo "KERNEL: ${AVAILABLE_KERNEL[*]}"
 	exit 1
 fi
-
-################################################################################
-# Normalization Environment
-################################################################################
-
-# Select Kernel Package
-case "${RELEASE}-${KERNEL}" in
-	* ) ;;
-esac
 
 ################################################################################
 # Require Environment
@@ -364,10 +348,64 @@ echo 'vagrant' > "${TMPFS_DIR}/etc/hostname"
 
 # Create FsTab
 cat > "${TMPFS_DIR}/etc/fstab" << __EOF__
-UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p3) / ext4 defaults 0 0
-UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p2) /boot/efi vfat defaults 0 0
+UUID=$(blkid -p -o value -s UUID ${BLOCK_DEV}p3) / ext4 defaults 0 0
+UUID=$(blkid -p -o value -s UUID ${BLOCK_DEV}p2) /boot/efi vfat defaults 0 0
 tmpfs /tmp tmpfs defaults 0 0
 __EOF__
+
+################################################################################
+# Repository
+################################################################################
+
+# Official Repository
+cat > "${TMPFS_DIR}/etc/apt/sources.list" << __EOF__
+# Official Repository
+deb     ${MIRROR_UBUNTU} ${RELEASE}           main restricted universe multiverse
+deb-src ${MIRROR_UBUNTU} ${RELEASE}           main restricted universe multiverse
+deb     ${MIRROR_UBUNTU} ${RELEASE}-updates   main restricted universe multiverse
+deb-src ${MIRROR_UBUNTU} ${RELEASE}-updates   main restricted universe multiverse
+deb     ${MIRROR_UBUNTU} ${RELEASE}-backports main restricted universe multiverse
+deb-src ${MIRROR_UBUNTU} ${RELEASE}-backports main restricted universe multiverse
+deb     ${MIRROR_UBUNTU} ${RELEASE}-security  main restricted universe multiverse
+deb-src ${MIRROR_UBUNTU} ${RELEASE}-security  main restricted universe multiverse
+__EOF__
+
+################################################################################
+# Upgrade
+################################################################################
+
+# Update Repository
+chroot "${TMPFS_DIR}" apt-get -qq update
+
+# Upgrade System
+chroot "${TMPFS_DIR}" apt-get -qq dist-upgrade
+
+################################################################################
+# Kernel
+################################################################################
+
+# Install Kernel
+chroot "${TMPFS_DIR}" apt-get -qq --no-install-recommends install "${KERNEL_IMAGE_PACKAGE}"
+
+# Get Kernel Version
+KERNEL_VERSION="$(chroot "${TMPFS_DIR}" dpkg -l | awk '{print $2}' | grep -E 'linux-image-[0-9\.-]+-generic' | sed -E 's/linux-image-//')"
+
+################################################################################
+# Minimal
+################################################################################
+
+# Minimal Package
+chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-minimal
+
+################################################################################
+# Systemd
+################################################################################
+
+# Check Release Version
+if [ "${RELEASE}" = 'trusty' ]; then
+	# Install Package
+	chroot "${TMPFS_DIR}" apt-get -qq install systemd
+fi
 
 ################################################################################
 # Admin User
@@ -404,75 +442,11 @@ if [ "x${USER_KEYS}" != "x" ]; then
 	mkdir -p "${TMPFS_DIR}/home/${USER_NAME}/.ssh"
 	chmod 0700 "${TMPFS_DIR}/home/${USER_NAME}/.ssh"
 	echo "${USER_KEYS}" > "${TMPFS_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
-	chmod 0644 "${TMPFS_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
+	chmod 0600 "${TMPFS_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
 fi
 
 # User Dir Permission
 chroot "${TMPFS_DIR}" chown -R "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}"
-
-################################################################################
-# Repository
-################################################################################
-
-# Official Repository
-cat > "${TMPFS_DIR}/etc/apt/sources.list" << __EOF__
-# Official Repository
-deb ${MIRROR_UBUNTU} ${RELEASE}           main restricted universe multiverse
-deb ${MIRROR_UBUNTU} ${RELEASE}-updates   main restricted universe multiverse
-deb ${MIRROR_UBUNTU} ${RELEASE}-backports main restricted universe multiverse
-deb ${MIRROR_UBUNTU} ${RELEASE}-security  main restricted universe multiverse
-__EOF__
-
-################################################################################
-# Upgrade
-################################################################################
-
-# Update Repository
-chroot "${TMPFS_DIR}" apt-get -qq update
-
-# Upgrade System
-chroot "${TMPFS_DIR}" apt-get -qq dist-upgrade
-
-################################################################################
-# Kernel
-################################################################################
-
-# Install Kernel
-chroot "${TMPFS_DIR}" apt-get -qq --no-install-recommends install "${KERNEL_IMAGE_PACKAGE}"
-
-# Get Kernel Version
-KERNEL_VERSION="$(chroot "${TMPFS_DIR}" dpkg -l | awk '{print $2}' | grep -E 'linux-image-[0-9\.-]+-generic' | sed -E 's/linux-image-//')"
-
-################################################################################
-# Minimal
-################################################################################
-
-# Minimal Package
-chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-minimal
-
-################################################################################
-# Standard
-################################################################################
-
-# Install Package
-chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-standard
-
-################################################################################
-# Systemd
-################################################################################
-
-# Check Release Version
-if [ "${RELEASE}" = 'trusty' ]; then
-	# Install Package
-	chroot "${TMPFS_DIR}" apt-get -qq install systemd
-fi
-
-################################################################################
-# Sudoers
-################################################################################
-
-# Install Package
-chroot "${TMPFS_DIR}" apt-get -qq install sudo
 
 # Not Require Terminal & No Password
 echo "# Vagrant User"                       >  "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
@@ -486,12 +460,6 @@ chmod 440 "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
 
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
-	# Install Require Packages
-	chroot "${TMPFS_DIR}" apt-get -qq install ethtool ifenslave
-
-	# Install Package
-	chroot "${TMPFS_DIR}" apt-get -qq --no-install-recommends install network-manager
-
 	# Default Interface
 	touch "${TMPFS_DIR}/etc/network/interfaces.d/vagrant"
 	{
@@ -504,10 +472,6 @@ if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 		echo 'allow-hotplug eth3'
 		echo 'iface eth3 inet dhcp'
 	} >> "${TMPFS_DIR}/etc/network/interfaces.d/vagrant"
-
-	# Managed Interface
-	sed -i -e 's@source-directory.*@source /etc/network/interfaces.d/\*@' "${TMPFS_DIR}/etc/network/interfaces"
-	sed -i -e 's/managed=.*/managed=true/;' "${TMPFS_DIR}/etc/NetworkManager/NetworkManager.conf"
 fi
 
 # Check Release Version
@@ -536,70 +500,6 @@ if [ "${RELEASE}" = 'xenial' ] || [ "${RELEASE}" = 'bionic' ]; then
 		echo '      optional: true'
 	} >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
 fi
-
-################################################################################
-# Netboot
-################################################################################
-
-# Require Package
-chroot "${TMPFS_DIR}" apt-get -qq install cloud-initramfs-copymods cloud-initramfs-dyn-netconf cloud-initramfs-rooturl overlayroot
-
-# Check Release Version
-if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
-	# Workaround initramfs dns
-	cat > "${TMPFS_DIR}/usr/share/initramfs-tools/hooks/libnss_dns" <<- '__EOF__'
-	#!/bin/sh -e
-
-	if [ "$1" = 'prereqs' ]; then
-		exit 0
-	fi
-
-	. /usr/share/initramfs-tools/hook-functions
-
-	for _LIBRARY in /lib/x86_64-linux-gnu/libnss_dns*; do
-		if [ -e "${_LIBRARY}" ]; then
-			copy_exec ${_LIBRARY} /lib
-		fi
-	done
-	__EOF__
-
-	# Execute Permission
-	chmod 0755 "${TMPFS_DIR}/usr/share/initramfs-tools/hooks/libnss_dns"
-
-	# Generate Reset Network Interface for Initramfs
-	cat > "${TMPFS_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zzz-reset-network-interfaces" <<- '__EOF__'
-	#!/bin/sh
-
-	PREREQ=""
-	if [ "$1" = 'prereqs' ]; then echo "${PREREQ}"; exit 0; fi
-
-	reset_network_interfaces()
-	{
-		local intf
-		for intf in $(ls /sys/class/net/); do
-			ip addr flush dev "${intf}"
-			ip link set "${intf}" down
-		done
-	}
-
-	. /scripts/functions
-
-	reset_network_interfaces
-	__EOF__
-
-	# Execute Permission
-	chmod 0755 "${TMPFS_DIR}/usr/share/initramfs-tools/scripts/init-bottom/zzz-reset-network-interfaces"
-fi
-
-################################################################################
-# Cloud
-################################################################################
-
-# Select Datasources
-chroot "${TMPFS_DIR}" sh -c "echo 'cloud-init cloud-init/datasources multiselect ${DATASOURCES}' | debconf-set-selections"
-
-# Require Package
-chroot "${TMPFS_DIR}" apt-get -qq install cloud-init
 
 ################################################################################
 # SSH
@@ -758,8 +658,8 @@ set default=0
 set timeout=0
 
 menuentry 'ubuntu' {
-	search --no-floppy --fs-uuid --set=root $(blkid -o value -s UUID ${BLOCK_DEV}p3)
-	linux  /vmlinuz root=UUID=$(blkid -o value -s UUID ${BLOCK_DEV}p3) ro biosdevname=0 net.ifnames=0
+	search --no-floppy --fs-uuid --set=root $(blkid -p -o value -s UUID ${BLOCK_DEV}p3)
+	linux  /vmlinuz root=UUID=$(blkid -p -o value -s UUID ${BLOCK_DEV}p3) ro biosdevname=0 net.ifnames=0
 	initrd /initrd.img
 }
 __EOF__
