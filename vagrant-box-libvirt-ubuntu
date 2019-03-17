@@ -584,6 +584,11 @@ find "${TMPFS_DIR}/var/lib/apt/lists" -type f -print0 | xargs -0 rm -f
 touch "${TMPFS_DIR}/var/lib/apt/lists/lock"
 chmod 0640 "${TMPFS_DIR}/var/lib/apt/lists/lock"
 
+# Sysmted Jounal Log
+if [ -d "${TMPFS_DIR}/var/log/jounal" ]; then
+ find "${TMPFS_DIR}/var/log/jounal" -mindepth 1 -maxdepth 1 | xargs rm -fr
+fi
+
 # Remote Apt Speed Up
 rm -f "${TMPFS_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
 
