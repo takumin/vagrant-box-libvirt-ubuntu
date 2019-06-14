@@ -398,14 +398,14 @@ KERNEL_VERSION="$(chroot "${TMPFS_DIR}" dpkg -l | awk '{print $2}' | grep -E 'li
 chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-minimal
 
 ################################################################################
-# Systemd
+# Require
 ################################################################################
 
-# Check Release Version
-if [ "${RELEASE}" = 'trusty' ]; then
-	# Install Package
-	chroot "${TMPFS_DIR}" apt-get -qq install systemd
-fi
+# Additional Packages
+case "${RELEASE}" in
+	"trusty" ) chroot "${TMPFS_DIR}" apt-get -qq install systemd ;;
+	"xenial" ) chroot "${TMPFS_DIR}" apt-get -qq install dbus ;;
+esac
 
 ################################################################################
 # Admin User
