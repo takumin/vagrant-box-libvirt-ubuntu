@@ -619,10 +619,8 @@ chroot "${TMPFS_DIR}" apt-get -qq autoremove --purge
 chroot "${TMPFS_DIR}" apt-get -qq clean
 
 # Refresh Persistent Machine ID
-rm "${TMPFS_DIR}/var/lib/dbus/machine-id"
-rm "${TMPFS_DIR}/etc/machine-id"
-touch "${TMPFS_DIR}/etc/machine-id"
-ln -s "/etc/machine-id" "${TMPFS_DIR}/var/lib/dbus/machine-id"
+echo -n '' > "${TMPFS_DIR}/etc/machine-id"
+ln -fs "/etc/machine-id" "${TMPFS_DIR}/var/lib/dbus/machine-id"
 
 # Remove Journal Log Directory
 rmdir "${TMPFS_DIR}/var/log/journal"
