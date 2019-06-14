@@ -401,11 +401,8 @@ chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-minimal
 # Require
 ################################################################################
 
-# Additional Packages
-case "${RELEASE}" in
-	"trusty" ) chroot "${TMPFS_DIR}" apt-get -qq install systemd ;;
-	"xenial" ) chroot "${TMPFS_DIR}" apt-get -qq install dbus ;;
-esac
+# Systemd Packages
+chroot "${TMPFS_DIR}" apt-get -qq install systemd policykit-1
 
 ################################################################################
 # Admin User
@@ -618,11 +615,11 @@ chroot "${TMPFS_DIR}" apt-get -qq autoremove --purge
 # Package Archive
 chroot "${TMPFS_DIR}" apt-get -qq clean
 
-# Refresh Persistent Machine ID
+# Persistent Machine ID
 echo -n '' > "${TMPFS_DIR}/etc/machine-id"
 ln -fs "/etc/machine-id" "${TMPFS_DIR}/var/lib/dbus/machine-id"
 
-# Remove Journal Log Directory
+# Journal Log Directory
 if [ -d "${TMPFS_DIR}/var/log/journal" ]; then
 	rmdir "${TMPFS_DIR}/var/log/journal"
 fi
