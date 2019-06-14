@@ -623,7 +623,9 @@ echo -n '' > "${TMPFS_DIR}/etc/machine-id"
 ln -fs "/etc/machine-id" "${TMPFS_DIR}/var/lib/dbus/machine-id"
 
 # Remove Journal Log Directory
-rmdir "${TMPFS_DIR}/var/log/journal"
+if [ -d "${TMPFS_DIR}/var/log/journal" ]; then
+	rmdir "${TMPFS_DIR}/var/log/journal"
+fi
 
 # Repository List
 find "${TMPFS_DIR}/var/lib/apt/lists" -type f -print0 | xargs -0 rm -f
