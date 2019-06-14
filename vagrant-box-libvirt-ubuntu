@@ -407,6 +407,16 @@ if [ "${RELEASE}" = 'trusty' ]; then
 	chroot "${TMPFS_DIR}" apt-get -qq install systemd
 fi
 
+# Remove Persistent Machine ID
+if [ -f "${TMPFS_DIR}/etc/machine-id" ]; then
+	rm "${TMPFS_DIR}/etc/machine-id"
+fi
+
+# Remove Journal Log Directory
+if [ -d "${TMPFS_DIR}/var/log/journal" ]; then
+	rmdir "${TMPFS_DIR}/var/log/journal"
+fi
+
 ################################################################################
 # Admin User
 ################################################################################
@@ -461,7 +471,6 @@ chmod 440 "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
 # Check Release Version
 if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 	# Default Interface
-	touch "${TMPFS_DIR}/etc/network/interfaces.d/vagrant"
 	{
 		echo 'allow-hotplug eth0'
 		echo 'iface eth0 inet dhcp'
@@ -471,7 +480,15 @@ if [ "${RELEASE}" = 'trusty' ] || [ "${RELEASE}" = 'xenial' ]; then
 		echo 'iface eth2 inet dhcp'
 		echo 'allow-hotplug eth3'
 		echo 'iface eth3 inet dhcp'
-	} >> "${TMPFS_DIR}/etc/network/interfaces.d/vagrant"
+		echo 'allow-hotplug eth4'
+		echo 'iface eth4 inet dhcp'
+		echo 'allow-hotplug eth5'
+		echo 'iface eth5 inet dhcp'
+		echo 'allow-hotplug eth6'
+		echo 'iface eth6 inet dhcp'
+		echo 'allow-hotplug eth7'
+		echo 'iface eth7 inet dhcp'
+	} >> "${TMPFS_DIR}/etc/network/interfaces"
 fi
 
 # Check Release Version
@@ -480,7 +497,7 @@ if [ "${RELEASE}" = 'xenial' ] || [ "${RELEASE}" = 'bionic' ]; then
 	chroot "${TMPFS_DIR}" apt-get -qq install nplan
 
 	# Default Interface
-	touch "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+	touch "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
 	{
 		echo 'network:'
 		echo '  version: 2'
@@ -498,7 +515,19 @@ if [ "${RELEASE}" = 'xenial' ] || [ "${RELEASE}" = 'bionic' ]; then
 		echo '    eth3:'
 		echo '      dhcp4: true'
 		echo '      optional: true'
-	} >> "${TMPFS_DIR}/etc/netplan/99-vagrant-network.yaml"
+		echo '    eth4:'
+		echo '      dhcp4: true'
+		echo '      optional: true'
+		echo '    eth5:'
+		echo '      dhcp4: true'
+		echo '      optional: true'
+		echo '    eth6:'
+		echo '      dhcp4: true'
+		echo '      optional: true'
+		echo '    eth7:'
+		echo '      dhcp4: true'
+		echo '      optional: true'
+	} >> "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
 fi
 
 ################################################################################
@@ -576,6 +605,19 @@ chroot "${TMPFS_DIR}" update-initramfs -c -k "${KERNEL_VERSION}"
 # Cleanup
 ################################################################################
 
+# Official Repository
+cat > "${TMPFS_DIR}/etc/apt/sources.list" << __EOF__
+# Official Repository
+deb     http://archive.ubuntu.com/ubuntu ${RELEASE}           main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu ${RELEASE}           main restricted universe multiverse
+deb     http://archive.ubuntu.com/ubuntu ${RELEASE}-updates   main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu ${RELEASE}-updates   main restricted universe multiverse
+deb     http://archive.ubuntu.com/ubuntu ${RELEASE}-backports main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu ${RELEASE}-backports main restricted universe multiverse
+deb     http://archive.ubuntu.com/ubuntu ${RELEASE}-security  main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu ${RELEASE}-security  main restricted universe multiverse
+__EOF__
+
 # Kernel&Initramfs Old Symbolic Link
 rm -f "${TMPFS_DIR}/vmlinuz.old"
 rm -f "${TMPFS_DIR}/initrd.img.old"
@@ -590,11 +632,6 @@ chroot "${TMPFS_DIR}" apt-get -qq clean
 find "${TMPFS_DIR}/var/lib/apt/lists" -type f -print0 | xargs -0 rm -f
 touch "${TMPFS_DIR}/var/lib/apt/lists/lock"
 chmod 0640 "${TMPFS_DIR}/var/lib/apt/lists/lock"
-
-# Sysmted Jounal Log
-if [ -d "${TMPFS_DIR}/var/log/jounal" ]; then
- find "${TMPFS_DIR}/var/log/jounal" -mindepth 1 -maxdepth 1 | xargs rm -fr
-fi
 
 # Remote Apt Speed Up
 rm -f "${TMPFS_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
@@ -650,7 +687,6 @@ if [ x\$grub_platform = xefi ]; then
 fi
 
 insmod gzio
-
 insmod font
 
 if loadfont \${prefix}/fonts/unicode.pf2; then
