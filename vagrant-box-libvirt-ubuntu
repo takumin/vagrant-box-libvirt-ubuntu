@@ -466,33 +466,6 @@ sed -i -e 's@^#?UseDNS.*$@UseDNS no@' "${TMPFS_DIR}/etc/ssh/sshd_config"
 # Remove Temporary SSH Host Keys
 find "${TMPFS_DIR}/etc/ssh" -type f -name '*_host_*' -exec rm {} \;
 
-# Generate SSH Host Keys for System Boot
-cat > "${TMPFS_DIR}/etc/systemd/system/ssh-keygen.service" << __EOF__
-[Unit]
-Description=Generate SSH Host Keys During Boot
-Before=ssh.service
-After=local-fs.target
-ConditionPathExists=|!/etc/ssh/ssh_host_dsa_key
-ConditionPathExists=|!/etc/ssh/ssh_host_dsa_key.pub
-ConditionPathExists=|!/etc/ssh/ssh_host_ecdsa_key
-ConditionPathExists=|!/etc/ssh/ssh_host_ecdsa_key.pub
-ConditionPathExists=|!/etc/ssh/ssh_host_ed25519_key
-ConditionPathExists=|!/etc/ssh/ssh_host_ed25519_key.pub
-ConditionPathExists=|!/etc/ssh/ssh_host_rsa_key
-ConditionPathExists=|!/etc/ssh/ssh_host_rsa_key.pub
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/usr/sbin/dpkg-reconfigure --frontend noninteractive openssh-server
-
-[Install]
-WantedBy=multi-user.target
-__EOF__
-
-# Enabled Systemd Service
-chroot "${TMPFS_DIR}" systemctl enable ssh-keygen.service
-
 ################################################################################
 # Rsync
 ################################################################################
