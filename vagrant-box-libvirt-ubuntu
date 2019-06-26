@@ -526,6 +526,10 @@ deb http://archive.ubuntu.com/ubuntu ${RELEASE}-backports main restricted univer
 deb http://archive.ubuntu.com/ubuntu ${RELEASE}-security  main restricted universe multiverse
 __EOF__
 
+# Default Hostname
+echo 'localhost.localdomain' > "${TMPFS_DIR}/etc/hostname"
+echo '127.0.1.1	localhost.localdomain localhost' >> "${TMPFS_DIR}/etc/hosts"
+
 # Kernel&Initramfs Old Symbolic Link
 rm -f "${TMPFS_DIR}/vmlinuz.old"
 rm -f "${TMPFS_DIR}/initrd.img.old"
