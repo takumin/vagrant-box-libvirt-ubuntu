@@ -203,6 +203,9 @@ case "${RELEASE}-${KERNEL}" in
 	"bionic-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-18.04" ;;
 esac
 
+# User Password to SHA512 Hash
+USER_PASS_HASH="$(python -c "import crypt, getpass, pwd; print crypt.crypt('${USER_PASS}','\$6\$Vagrant\$')")"
+
 ################################################################################
 # Initialize
 ################################################################################
@@ -392,48 +395,45 @@ chroot "${TMPFS_DIR}" apt-get -qq install cloud-init
 # Admin User
 ################################################################################
 
-# Add Group
+# System Group
 chroot "${TMPFS_DIR}" addgroup --system admin
 chroot "${TMPFS_DIR}" addgroup --system lpadmin
+chroot "${TMPFS_DIR}" addgroup --system lxd
 chroot "${TMPFS_DIR}" addgroup --system sambashare
 chroot "${TMPFS_DIR}" addgroup --system netdev
 
-# Add User
-chroot "${TMPFS_DIR}" adduser --disabled-password --gecos "${USER_FULL},,," "${USER_NAME}"
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" adm
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" admin
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" audio
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" cdrom
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" dialout
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" dip
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" lpadmin
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" plugdev
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" sambashare
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" staff
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" sudo
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" users
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" video
-chroot "${TMPFS_DIR}" adduser "${USER_NAME}" netdev
-
-# Change Password
-chroot "${TMPFS_DIR}" sh -c "echo ${USER_NAME}:${USER_PASS} | chpasswd"
-
-# SSH Public Key
-if [ "x${USER_KEYS}" != "x" ]; then
-	mkdir -p "${TMPFS_DIR}/home/${USER_NAME}/.ssh"
-	chmod 0700 "${TMPFS_DIR}/home/${USER_NAME}/.ssh"
-	echo "${USER_KEYS}" > "${TMPFS_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
-	chmod 0600 "${TMPFS_DIR}/home/${USER_NAME}/.ssh/authorized_keys"
-fi
-
-# User Dir Permission
-chroot "${TMPFS_DIR}" chown -R "${USER_NAME}:${USER_NAME}" "/home/${USER_NAME}"
-
-# Not Require Terminal & No Password
-echo "# Vagrant User"                       >  "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
-echo "Defaults:${USER_NAME} visiblepw"      >> "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
-echo "${USER_NAME} ALL=(ALL) NOPASSWD: ALL" >> "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
-chmod 440 "${TMPFS_DIR}/etc/sudoers.d/${USER_NAME}"
+# Override Cloud-Init Default User
+cat > "${TMPFS_DIR}/etc/cloud/cloud.cfg.d/99_default_user.cfg" << __EOF__
+system_info:
+  default_user:
+    name: ${USER_NAME}
+    gecos: ${USER_FULL}
+    groups:
+    - adm
+    - admin
+    - audio
+    - cdrom
+    - dialout
+    - dip
+    - floppy
+    - lpadmin
+    - lxd
+    - netdev
+    - plugdev
+    - sambashare
+    - staff
+    - sudo
+    - users
+    - video
+    lock_passwd: False
+    passwd: ${USER_PASS_HASH}
+    sudo:
+    - "Defaults:${USER_NAME} visiblepw"
+    - "ALL=(ALL) NOPASSWD:ALL"
+    ssh_authorized_keys:
+    - "${USER_KEYS}"
+    shell: /bin/bash
+__EOF__
 
 ################################################################################
 # SSH
