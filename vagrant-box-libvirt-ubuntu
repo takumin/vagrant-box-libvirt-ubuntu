@@ -360,14 +360,10 @@ __EOF__
 # Official Repository
 cat > "${TMPFS_DIR}/etc/apt/sources.list" << __EOF__
 # Official Repository
-deb     ${MIRROR_UBUNTU} ${RELEASE}           main restricted universe multiverse
-deb-src ${MIRROR_UBUNTU} ${RELEASE}           main restricted universe multiverse
-deb     ${MIRROR_UBUNTU} ${RELEASE}-updates   main restricted universe multiverse
-deb-src ${MIRROR_UBUNTU} ${RELEASE}-updates   main restricted universe multiverse
-deb     ${MIRROR_UBUNTU} ${RELEASE}-backports main restricted universe multiverse
-deb-src ${MIRROR_UBUNTU} ${RELEASE}-backports main restricted universe multiverse
-deb     ${MIRROR_UBUNTU} ${RELEASE}-security  main restricted universe multiverse
-deb-src ${MIRROR_UBUNTU} ${RELEASE}-security  main restricted universe multiverse
+deb ${MIRROR_UBUNTU} ${RELEASE}           main restricted universe multiverse
+deb ${MIRROR_UBUNTU} ${RELEASE}-updates   main restricted universe multiverse
+deb ${MIRROR_UBUNTU} ${RELEASE}-backports main restricted universe multiverse
+deb ${MIRROR_UBUNTU} ${RELEASE}-security  main restricted universe multiverse
 __EOF__
 
 ################################################################################
@@ -601,14 +597,10 @@ chroot "${TMPFS_DIR}" update-initramfs -c -k "${KERNEL_VERSION}"
 # Official Repository
 cat > "${TMPFS_DIR}/etc/apt/sources.list" << __EOF__
 # Official Repository
-deb     http://archive.ubuntu.com/ubuntu ${RELEASE}           main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu ${RELEASE}           main restricted universe multiverse
-deb     http://archive.ubuntu.com/ubuntu ${RELEASE}-updates   main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu ${RELEASE}-updates   main restricted universe multiverse
-deb     http://archive.ubuntu.com/ubuntu ${RELEASE}-backports main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu ${RELEASE}-backports main restricted universe multiverse
-deb     http://archive.ubuntu.com/ubuntu ${RELEASE}-security  main restricted universe multiverse
-deb-src http://archive.ubuntu.com/ubuntu ${RELEASE}-security  main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu ${RELEASE}           main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu ${RELEASE}-updates   main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu ${RELEASE}-backports main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu ${RELEASE}-security  main restricted universe multiverse
 __EOF__
 
 # Kernel&Initramfs Old Symbolic Link
