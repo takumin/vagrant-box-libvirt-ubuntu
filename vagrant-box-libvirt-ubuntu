@@ -428,7 +428,6 @@ system_info:
     lock_passwd: False
     passwd: '${USER_PASS_HASH}'
     sudo:
-    - 'Defaults:${USER_NAME} visiblepw'
     - 'ALL=(ALL) NOPASSWD:ALL'
     ssh_authorized_keys:
     - '${USER_KEYS}'
@@ -476,11 +475,17 @@ chroot "${TMPFS_DIR}" apt-get -qq install ssh
 # Disable DNS Lookup
 sed -i -e 's@^#?UseDNS.*$@UseDNS no@' "${TMPFS_DIR}/etc/ssh/sshd_config"
 
-# Remove Temporary SSH Host Keys
-find "${TMPFS_DIR}/etc/ssh" -type f -name '*_host_*' -exec rm {} \;
+# Enable Root Login
+sed -i -e 's@^#?PermitRootLogin.*$@PermitRootLogin without-password@' "${TMPFS_DIR}/etc/ssh/sshd_config"
 
 # Enable Password Login
+sed -i -e 's@^#?PasswordAuthentication.*$@PasswordAuthentication yes@' "${TMPFS_DIR}/etc/ssh/sshd_config"
+
+# Enable Password Login (Cloud-Init)
 echo 'ssh_pwauth: True' > "${TMPFS_DIR}/etc/cloud/cloud.cfg.d/99_ssh_pwauth.cfg"
+
+# Remove Temporary SSH Host Keys
+find "${TMPFS_DIR}/etc/ssh" -type f -name '*_host_*' -exec rm {} \;
 
 ################################################################################
 # Rsync
