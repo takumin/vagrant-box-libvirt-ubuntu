@@ -406,33 +406,33 @@ chroot "${TMPFS_DIR}" addgroup --system netdev
 cat > "${TMPFS_DIR}/etc/cloud/cloud.cfg.d/99_default_user.cfg" << __EOF__
 system_info:
   default_user:
-    name: ${USER_NAME}
-    gecos: ${USER_FULL}
+    name: '${USER_NAME}'
+    gecos: '${USER_FULL}'
     groups:
-    - adm
-    - admin
-    - audio
-    - cdrom
-    - dialout
-    - dip
-    - floppy
-    - lpadmin
-    - lxd
-    - netdev
-    - plugdev
-    - sambashare
-    - staff
-    - sudo
-    - users
-    - video
+    - 'adm'
+    - 'admin'
+    - 'audio'
+    - 'cdrom'
+    - 'dialout'
+    - 'dip'
+    - 'floppy'
+    - 'lpadmin'
+    - 'lxd'
+    - 'netdev'
+    - 'plugdev'
+    - 'sambashare'
+    - 'staff'
+    - 'sudo'
+    - 'users'
+    - 'video'
     lock_passwd: False
-    passwd: ${USER_PASS_HASH}
+    passwd: '${USER_PASS_HASH}'
     sudo:
-    - "Defaults:${USER_NAME} visiblepw"
-    - "ALL=(ALL) NOPASSWD:ALL"
+    - 'Defaults:${USER_NAME} visiblepw'
+    - 'ALL=(ALL) NOPASSWD:ALL'
     ssh_authorized_keys:
-    - "${USER_KEYS}"
-    shell: /bin/bash
+    - '${USER_KEYS}'
+    shell: '/bin/bash'
 __EOF__
 
 ################################################################################
