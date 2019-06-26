@@ -436,6 +436,37 @@ system_info:
 __EOF__
 
 ################################################################################
+# Network
+################################################################################
+
+# Check Release Version
+if [ "${RELEASE}" = 'xenial' ]; then
+	# Default Interface
+	{
+		echo 'allow-hotplug eth0'
+		echo 'iface eth0 inet dhcp'
+	} >> "${TMPFS_DIR}/etc/network/interfaces"
+fi
+
+# Check Release Version
+if [ "${RELEASE}" = 'bionic' ]; then
+	# Install Package
+	chroot "${TMPFS_DIR}" apt-get -qq install nplan
+
+	# Default Interface
+	touch "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
+	{
+		echo 'network:'
+		echo '  version: 2'
+		echo '  renderer: networkd'
+		echo '  ethernets:'
+		echo '    eth0:'
+		echo '      dhcp4: true'
+		echo '      optional: true'
+	} >> "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
+fi
+
+################################################################################
 # SSH
 ################################################################################
 
