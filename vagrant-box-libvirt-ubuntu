@@ -404,6 +404,12 @@ chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-minimal
 # Systemd Packages
 chroot "${TMPFS_DIR}" apt-get -qq install systemd policykit-1
 
+# Cloud-Init Datasources
+chroot "${TMPFS_DIR}" sh -c "echo 'cloud-init cloud-init/datasources multiselect NoCloud, None' | debconf-set-selections"
+
+# Cloud-Init Package
+chroot "${TMPFS_DIR}" apt-get -qq install cloud-init
+
 ################################################################################
 # Admin User
 ################################################################################
