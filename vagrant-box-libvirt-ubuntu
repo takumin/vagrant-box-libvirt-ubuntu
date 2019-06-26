@@ -16,7 +16,6 @@ set -eu
 
 # Release Codename
 # Value:
-#   - trusty
 #   - xenial
 #   - bionic
 # shellcheck disable=SC2086
@@ -101,7 +100,6 @@ declare -a AVAILABLE_ARCH=(
 
 # Release
 declare -a AVAILABLE_RELEASE=(
-	'trusty'
 	'xenial'
 	'bionic'
 )
@@ -199,10 +197,8 @@ fi
 
 # Select Kernel Image Package
 case "${RELEASE}-${KERNEL}" in
-	"trusty-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
 	"xenial-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
 	"bionic-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
-	"trusty-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-lts-xenial" ;;
 	"xenial-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-16.04" ;;
 	"bionic-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-18.04" ;;
 esac
@@ -324,20 +320,6 @@ chmod 1777 "${TMPFS_DIR}/dev/shm"
 
 # Apt Speed Up
 echo 'force-unsafe-io' > "${TMPFS_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
-
-# Check Release Version
-if [ "${RELEASE}" = 'trusty' ]; then
-	# Workaround policy-rc.d
-	echo $'#!/bin/sh\nexit 101' > "${TMPFS_DIR}/usr/sbin/policy-rc.d"
-	chmod +x "${TMPFS_DIR}/usr/sbin/policy-rc.d"
-
-	# Workaround initctl
-	chroot "${TMPFS_DIR}" dpkg-divert --local --rename --add /sbin/initctl
-	chroot "${TMPFS_DIR}" ln -fs /bin/true /sbin/initctl
-
-	# Workaround utmp
-	chroot "${TMPFS_DIR}" touch /var/run/utmp
-fi
 
 ################################################################################
 # System
@@ -536,16 +518,6 @@ chmod 0640 "${TMPFS_DIR}/var/lib/apt/lists/lock"
 
 # Remote Apt Speed Up
 rm -f "${TMPFS_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
-
-# Check Release Version
-if [ "${RELEASE}" = 'trusty' ]; then
-	# Workaround policy-rc.d
-	rm -f "${TMPFS_DIR}/usr/sbin/policy-rc.d"
-
-	# Workaround initctl
-	rm -f "${TMPFS_DIR}/sbin/initctl"
-	chroot "${TMPFS_DIR}" dpkg-divert --rename --remove /sbin/initctl
-fi
 
 ################################################################################
 # Archive
