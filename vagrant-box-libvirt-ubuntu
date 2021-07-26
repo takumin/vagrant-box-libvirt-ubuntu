@@ -197,8 +197,8 @@ fi
 
 # Select Kernel Image Package
 case "${RELEASE}-${KERNEL}" in
-	"bionic-virtual"     ) KERNEL_IMAGE_PACKAGE="linux-image-kvm" ;;
-	"focal-virtual"      ) KERNEL_IMAGE_PACKAGE="linux-image-kvm" ;;
+	"bionic-virtual"     ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
+	"focal-virtual"      ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
 	"bionic-virtual-hwe" ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-18.04" ;;
 	"focal-virtual-hwe"  ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-20.04" ;;
 esac
@@ -218,6 +218,7 @@ dpkg -l | awk '{print $2}' | grep -qs '^qemu$'        || apt-get -qq --no-instal
 dpkg -l | awk '{print $2}' | grep -qs '^gdisk$'       || apt-get -qq --no-install-recommends install gdisk
 dpkg -l | awk '{print $2}' | grep -qs '^dosfstools$'  || apt-get -qq --no-install-recommends install dosfstools
 dpkg -l | awk '{print $2}' | grep -qs '^e2fsprogs$'   || apt-get -qq --no-install-recommends install e2fsprogs
+dpkg -l | awk '{print $2}' | grep -qs '^xfsprogs$'    || apt-get -qq --no-install-recommends install xfsprogs
 dpkg -l | awk '{print $2}' | grep -qs '^pixz$'        || apt-get -qq --no-install-recommends install pixz
 dpkg -l | awk '{print $2}' | grep -qs '^debootstrap$' || apt-get -qq --no-install-recommends install debootstrap
 
@@ -270,7 +271,7 @@ sgdisk      -n 3::-1    -c 3:"Root" -t 3:8300 "${BLOCK_DEV}"
 mkfs.vfat -F 32 -n "ESP" "${BLOCK_DEV}p2"
 
 # Format Root File System Partition
-mkfs.ext4 -E nodiscard -L "Root" "${BLOCK_DEV}p3"
+mkfs.xfs -L "Root" "${BLOCK_DEV}p3"
 
 # Mount Partition
 mount "${BLOCK_DEV}p3" "${GRUB_DIR}"
@@ -333,7 +334,7 @@ echo 'vagrant' > "${TMPFS_DIR}/etc/hostname"
 
 # Create FsTab
 cat > "${TMPFS_DIR}/etc/fstab" << __EOF__
-UUID=$(blkid -p -o value -s UUID ${BLOCK_DEV}p3) / ext4 defaults 0 0
+UUID=$(blkid -p -o value -s UUID ${BLOCK_DEV}p3) / xfs defaults 0 0
 UUID=$(blkid -p -o value -s UUID ${BLOCK_DEV}p2) /boot/efi vfat defaults 0 0
 tmpfs /tmp tmpfs defaults 0 0
 __EOF__
@@ -379,17 +380,22 @@ KERNEL_VERSION="$(chroot "${TMPFS_DIR}" dpkg -l | awk '{print $2}' | grep -E 'li
 chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-minimal
 
 ################################################################################
-# Require
+# Standard
 ################################################################################
 
-# Systemd Packages
-chroot "${TMPFS_DIR}" apt-get -qq install systemd policykit-1
+# Standard Package
+chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-standard
 
-# IRQBalance Package
-chroot "${TMPFS_DIR}" apt-get -qq install irqbalance
+################################################################################
+# File System
+################################################################################
 
-# Bash Completion Package
-chroot "${TMPFS_DIR}" apt-get -qq install bash-completion
+# XFS Package
+chroot "${TMPFS_DIR}" apt-get -qq install xfsprogs
+
+################################################################################
+# Cloud-Init
+################################################################################
 
 # Cloud-Init Datasources
 chroot "${TMPFS_DIR}" sh -c "echo 'cloud-init cloud-init/datasources multiselect NoCloud, None' | debconf-set-selections"
