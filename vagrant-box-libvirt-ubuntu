@@ -18,8 +18,9 @@ set -eu
 # Value:
 #   - xenial
 #   - bionic
+#   - focal
 # shellcheck disable=SC2086
-: ${RELEASE:='bionic'}
+: ${RELEASE:='focal'}
 
 # Kernel Package
 # Values:
@@ -102,6 +103,7 @@ declare -a AVAILABLE_ARCH=(
 declare -a AVAILABLE_RELEASE=(
 	'xenial'
 	'bionic'
+	'focal'
 )
 
 # Kernel
@@ -199,12 +201,14 @@ fi
 case "${RELEASE}-${KERNEL}" in
 	"xenial-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
 	"bionic-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
+	"focal-virtual"             ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
 	"xenial-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-16.04" ;;
 	"bionic-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-18.04" ;;
+	"focal-virtual-hwe"         ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-20.04" ;;
 esac
 
 # User Password to SHA512 Hash
-USER_PASS_HASH="$(python -c "import crypt, getpass, pwd; print crypt.crypt('${USER_PASS}','\$6\$Vagrant\$')")"
+USER_PASS_HASH="$(echo "${USER_PASS}" | openssl passwd -stdin -6 -salt "$(cat /dev/urandom | tr -dc 'A-Za-z0-9' | fold -w 8 | head -n 1)")"
 
 ################################################################################
 # Initialize
@@ -448,7 +452,7 @@ if [ "${RELEASE}" = 'xenial' ]; then
 fi
 
 # Check Release Version
-if [ "${RELEASE}" = 'bionic' ]; then
+if [ "${RELEASE}" = 'bionic' ] || [ "${RELEASE}" = 'focal' ]; then
 	# Install Package
 	chroot "${TMPFS_DIR}" apt-get -qq install nplan
 
@@ -511,6 +515,9 @@ chroot "${TMPFS_DIR}" apt-get -qq install grub2-common grub-pc-bin grub-efi-amd6
 ################################################################################
 # Initramfs
 ################################################################################
+
+# Require Package
+chroot "${TMPFS_DIR}" apt-get -qq install initramfs-tools
 
 # Cleanup Initramfs
 chroot "${TMPFS_DIR}" update-initramfs -d -k all
