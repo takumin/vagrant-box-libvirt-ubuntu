@@ -447,18 +447,6 @@ __EOF__
 # Install Package
 chroot "${TMPFS_DIR}" apt-get -qq install nplan
 
-# Default Interface
-touch "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
-{
-	echo 'network:'
-	echo '  version: 2'
-	echo '  renderer: networkd'
-	echo '  ethernets:'
-	echo '    eth0:'
-	echo '      dhcp4: true'
-	echo '      optional: true'
-} >> "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
-
 ################################################################################
 # SSH
 ################################################################################
