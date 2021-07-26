@@ -16,7 +16,6 @@ set -eu
 
 # Release Codename
 # Value:
-#   - xenial
 #   - bionic
 #   - focal
 # shellcheck disable=SC2086
@@ -101,7 +100,6 @@ declare -a AVAILABLE_ARCH=(
 
 # Release
 declare -a AVAILABLE_RELEASE=(
-	'xenial'
 	'bionic'
 	'focal'
 )
@@ -199,12 +197,10 @@ fi
 
 # Select Kernel Image Package
 case "${RELEASE}-${KERNEL}" in
-	"xenial-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
-	"bionic-virtual"            ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
-	"focal-virtual"             ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
-	"xenial-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-16.04" ;;
-	"bionic-virtual-hwe"        ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-18.04" ;;
-	"focal-virtual-hwe"         ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-20.04" ;;
+	"bionic-virtual"     ) KERNEL_IMAGE_PACKAGE="linux-image-kvm" ;;
+	"focal-virtual"      ) KERNEL_IMAGE_PACKAGE="linux-image-kvm" ;;
+	"bionic-virtual-hwe" ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-18.04" ;;
+	"focal-virtual-hwe"  ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-20.04" ;;
 esac
 
 # User Password to SHA512 Hash
@@ -250,7 +246,7 @@ qemu-nbd -d "${BLOCK_DEV}" > /dev/null
 mount -t tmpfs -o 'mode=0755' tmpfs "${TMPFS_DIR}"
 
 # Create Disk Image
-qemu-img create -q -f qcow2 "${WORK_DIR}/box.img" 16G
+qemu-img create -q -f qcow2 "${WORK_DIR}/box.img" 8G
 
 # Connect Disk Image
 qemu-nbd -c "${BLOCK_DEV}" "${WORK_DIR}/box.img"
@@ -373,7 +369,7 @@ chroot "${TMPFS_DIR}" apt-get -qq dist-upgrade
 chroot "${TMPFS_DIR}" apt-get -qq --no-install-recommends install "${KERNEL_IMAGE_PACKAGE}"
 
 # Get Kernel Version
-KERNEL_VERSION="$(chroot "${TMPFS_DIR}" dpkg -l | awk '{print $2}' | grep -E 'linux-image-[0-9\.-]+-generic' | sed -E 's/linux-image-//')"
+KERNEL_VERSION="$(chroot "${TMPFS_DIR}" dpkg -l | awk '{print $2}' | grep -E 'linux-image-[0-9\.-]+' | sed -E 's/linux-image-//')"
 
 ################################################################################
 # Minimal
@@ -388,6 +384,12 @@ chroot "${TMPFS_DIR}" apt-get -qq install ubuntu-minimal
 
 # Systemd Packages
 chroot "${TMPFS_DIR}" apt-get -qq install systemd policykit-1
+
+# IRQBalance Package
+chroot "${TMPFS_DIR}" apt-get -qq install irqbalance
+
+# Bash Completion Package
+chroot "${TMPFS_DIR}" apt-get -qq install bash-completion
 
 # Cloud-Init Datasources
 chroot "${TMPFS_DIR}" sh -c "echo 'cloud-init cloud-init/datasources multiselect NoCloud, None' | debconf-set-selections"
@@ -442,32 +444,20 @@ __EOF__
 # Network
 ################################################################################
 
-# Check Release Version
-if [ "${RELEASE}" = 'xenial' ]; then
-	# Default Interface
-	{
-		echo 'allow-hotplug eth0'
-		echo 'iface eth0 inet dhcp'
-	} >> "${TMPFS_DIR}/etc/network/interfaces"
-fi
+# Install Package
+chroot "${TMPFS_DIR}" apt-get -qq install nplan
 
-# Check Release Version
-if [ "${RELEASE}" = 'bionic' ] || [ "${RELEASE}" = 'focal' ]; then
-	# Install Package
-	chroot "${TMPFS_DIR}" apt-get -qq install nplan
-
-	# Default Interface
-	touch "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
-	{
-		echo 'network:'
-		echo '  version: 2'
-		echo '  renderer: networkd'
-		echo '  ethernets:'
-		echo '    eth0:'
-		echo '      dhcp4: true'
-		echo '      optional: true'
-	} >> "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
-fi
+# Default Interface
+touch "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
+{
+	echo 'network:'
+	echo '  version: 2'
+	echo '  renderer: networkd'
+	echo '  ethernets:'
+	echo '    eth0:'
+	echo '      dhcp4: true'
+	echo '      optional: true'
+} >> "${TMPFS_DIR}/etc/netplan/01-netcfg.yaml"
 
 ################################################################################
 # SSH
@@ -545,6 +535,8 @@ echo '127.0.1.1	localhost.localdomain localhost' >> "${TMPFS_DIR}/etc/hosts"
 # Kernel&Initramfs Old Symbolic Link
 rm -f "${TMPFS_DIR}/vmlinuz.old"
 rm -f "${TMPFS_DIR}/initrd.img.old"
+rm -f "${TMPFS_DIR}/boot/vmlinuz.old"
+rm -f "${TMPFS_DIR}/boot/initrd.img.old"
 
 # Out Of Packages
 chroot "${TMPFS_DIR}" apt-get -qq autoremove --purge
@@ -599,41 +591,7 @@ if [ "${ARCH}" = 'amd64' ]; then
 fi
 
 # Create Grub Config File
-cat > "${GRUB_DIR}/boot/grub/grub.cfg" << __EOF__
-if [ x\$grub_platform = xpc ]; then
-	insmod vbe
-fi
-
-if [ x\$grub_platform = xefi ]; then
-	insmod efi_gop
-	insmod efi_uga
-fi
-
-insmod gzio
-insmod font
-
-if loadfont \${prefix}/fonts/unicode.pf2; then
-	insmod gfxterm
-	set gfxmode=auto
-	set gfxpayload=keep
-	terminal_output gfxterm
-fi
-
-insmod part_gpt
-insmod part_msdos
-
-insmod fat
-insmod ext2
-
-set default=0
-set timeout=0
-
-menuentry 'ubuntu' {
-	search --no-floppy --fs-uuid --set=root $(blkid -p -o value -s UUID ${BLOCK_DEV}p3)
-	linux  /vmlinuz root=UUID=$(blkid -p -o value -s UUID ${BLOCK_DEV}p3) ro biosdevname=0 net.ifnames=0
-	initrd /initrd.img
-}
-__EOF__
+chroot "${GRUB_DIR}" env GRUB_DISABLE_OS_PROBER=true grub-mkconfig -o /boot/grub/grub.cfg
 
 # Unmount Partition
 awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
@@ -663,7 +621,7 @@ cat > "${BUILD_DIR}/metadata.json" << '__EOF__'
 {
   "provider": "libvirt",
   "format": "qcow2",
-  "virtual_size": 16
+  "virtual_size": 8
 }
 __EOF__
 

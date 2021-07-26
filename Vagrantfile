@@ -1,10 +1,10 @@
 # vim: set ft=ruby :
-ENV['UBUNTU_MIRROR'] ||= 'http://archive.ubuntu.com/ubuntu'
-Vagrant.require_version '>= 2.2.3'
+ENV['MIRROR_UBUNTU'] ||= 'http://archive.ubuntu.com/ubuntu'
+Vagrant.require_version '>= 2.2.17'
 Vagrant.configure('2') do |config|
   config.vagrant.plugins = ['vagrant-libvirt']
-  config.vm.box = 'ubuntu1804'
-  config.vm.box_url = 'file://./ubuntu-amd64-bionic-libvirt.box'
+  config.vm.box = 'ubuntu2004'
+  config.vm.box_url = 'file://./ubuntu-amd64-focal-libvirt.box'
   config.vm.provider :libvirt do |libvirt|
     libvirt.graphics_type = 'spice'
     libvirt.graphics_ip = '0.0.0.0'
@@ -23,14 +23,14 @@ Vagrant.configure('2') do |config|
 . /etc/lsb-release
 # Apt Repository
 cat > /etc/apt/sources.list << __EOF__
-deb     #{ENV['UBUNTU_MIRROR']} ${DISTRIB_CODENAME}           main restricted universe multiverse
-deb-src #{ENV['UBUNTU_MIRROR']} ${DISTRIB_CODENAME}           main restricted universe multiverse
-deb     #{ENV['UBUNTU_MIRROR']} ${DISTRIB_CODENAME}-updates   main restricted universe multiverse
-deb-src #{ENV['UBUNTU_MIRROR']} ${DISTRIB_CODENAME}-updates   main restricted universe multiverse
-deb     #{ENV['UBUNTU_MIRROR']} ${DISTRIB_CODENAME}-backports main restricted universe multiverse
-deb-src #{ENV['UBUNTU_MIRROR']} ${DISTRIB_CODENAME}-backports main restricted universe multiverse
-deb     #{ENV['UBUNTU_MIRROR']} ${DISTRIB_CODENAME}-security  main restricted universe multiverse
-deb-src #{ENV['UBUNTU_MIRROR']} ${DISTRIB_CODENAME}-security  main restricted universe multiverse
+deb     #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}           main restricted universe multiverse
+deb-src #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}           main restricted universe multiverse
+deb     #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-updates   main restricted universe multiverse
+deb-src #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-updates   main restricted universe multiverse
+deb     #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-backports main restricted universe multiverse
+deb-src #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-backports main restricted universe multiverse
+deb     #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-security  main restricted universe multiverse
+deb-src #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-security  main restricted universe multiverse
 __EOF__
 # Apt Update
 apt-get -y update
