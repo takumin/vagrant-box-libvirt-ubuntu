@@ -585,7 +585,7 @@ if [ "${ARCH}" = 'amd64' ]; then
 fi
 
 # Create Grub Config File
-chroot "${GRUB_DIR}" env GRUB_DISABLE_OS_PROBER=true grub-mkconfig -o /boot/grub/grub.cfg
+chroot "${GRUB_DIR}" env GRUB_DISABLE_OS_PROBER=true GRUB_TIMEOUT=0 grub-mkconfig -o /boot/grub/grub.cfg
 
 # Unmount Partition
 awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
