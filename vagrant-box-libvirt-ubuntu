@@ -18,6 +18,7 @@ set -eu
 # Value:
 #   - bionic
 #   - focal
+#   - jammy
 # shellcheck disable=SC2086
 : ${RELEASE:='focal'}
 
@@ -102,6 +103,7 @@ declare -a AVAILABLE_ARCH=(
 declare -a AVAILABLE_RELEASE=(
 	'bionic'
 	'focal'
+	'jammy'
 )
 
 # Kernel
@@ -199,8 +201,10 @@ fi
 case "${RELEASE}-${KERNEL}" in
 	"bionic-virtual"     ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
 	"focal-virtual"      ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
+	"jammy-virtual"      ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
 	"bionic-virtual-hwe" ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-18.04" ;;
 	"focal-virtual-hwe"  ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-20.04" ;;
+	"jammy-virtual-hwe"  ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-22.04" ;;
 esac
 
 # User Password to SHA512 Hash
@@ -266,6 +270,9 @@ sgdisk      -n 2::+512M -c 2:"Efi"  -t 2:ef00 "${BLOCK_DEV}"
 
 # Create Root Partition
 sgdisk      -n 3::-1    -c 3:"Root" -t 3:8300 "${BLOCK_DEV}"
+
+# Set Legacy BIOS Boot Flag
+sgdisk -A 1:set:2 "${BLOCK_DEV}"
 
 # Format EFI System Partition
 mkfs.vfat -F 32 -n "ESP" "${BLOCK_DEV}p2"
@@ -453,6 +460,9 @@ __EOF__
 # Install Package
 chroot "${TMPFS_DIR}" apt-get -qq install nplan
 
+# Enabled Systemd Networkd
+chroot "${TMPFS_DIR}" systemctl enable systemd-networkd.service
+
 ################################################################################
 # SSH
 ################################################################################
@@ -584,8 +594,13 @@ if [ "${ARCH}" = 'amd64' ]; then
 	chroot "${GRUB_DIR}" grub-install --target=x86_64-efi --efi-directory=/boot/efi --no-nvram --recheck
 fi
 
+# Disable OS Prober
+echo '' >> "${GRUB_DIR}/etc/default/grub"
+echo '# Disable OS Prober' >> "${GRUB_DIR}/etc/default/grub"
+echo 'GRUB_DISABLE_OS_PROBER="true"' >> "${GRUB_DIR}/etc/default/grub"
+
 # Create Grub Config File
-chroot "${GRUB_DIR}" env GRUB_DISABLE_OS_PROBER=true GRUB_TIMEOUT=0 grub-mkconfig -o /boot/grub/grub.cfg
+chroot "${GRUB_DIR}" grub-mkconfig -o /boot/grub/grub.cfg
 
 # Unmount Partition
 awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
