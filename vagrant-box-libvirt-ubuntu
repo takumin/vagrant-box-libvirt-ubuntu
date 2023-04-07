@@ -471,13 +471,16 @@ chroot "${TMPFS_DIR}" systemctl enable systemd-networkd.service
 chroot "${TMPFS_DIR}" apt-get -qq install ssh
 
 # Disable DNS Lookup
-sed -i -e 's@^#?UseDNS.*$@UseDNS no@' "${TMPFS_DIR}/etc/ssh/sshd_config"
+sed -i -e 's@^.*UseDNS.*$@UseDNS no@' "${TMPFS_DIR}/etc/ssh/sshd_config"
 
 # Enable Root Login
-sed -i -e 's@^#?PermitRootLogin.*$@PermitRootLogin without-password@' "${TMPFS_DIR}/etc/ssh/sshd_config"
+sed -i -e 's@^.*PermitRootLogin.*$@PermitRootLogin without-password@' "${TMPFS_DIR}/etc/ssh/sshd_config"
 
 # Enable Password Login
-sed -i -e 's@^#?PasswordAuthentication.*$@PasswordAuthentication yes@' "${TMPFS_DIR}/etc/ssh/sshd_config"
+sed -i -e 's@^.*PasswordAuthentication.*$@PasswordAuthentication yes@' "${TMPFS_DIR}/etc/ssh/sshd_config"
+
+# Enable SSH-1 RSA Authentication
+echo 'PubkeyAcceptedAlgorithms +ssh-rsa' >> "${TMPFS_DIR}/etc/ssh/sshd_config"
 
 # Enable Password Login (Cloud-Init)
 echo 'ssh_pwauth: True' > "${TMPFS_DIR}/etc/cloud/cloud.cfg.d/99_ssh_pwauth.cfg"
