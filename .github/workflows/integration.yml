@@ -1,0 +1,32 @@
+name: CI
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - 'master'
+    tags:
+    - 'v*'
+permissions:
+  contents: read
+jobs:
+  ci:
+    strategy:
+      matrix:
+        release: [jammy, focal, bionic]
+    name: CI
+    runs-on: ubuntu-latest
+    steps:
+    ################################################################################
+    # Checkout
+    ################################################################################
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: ${{ startsWith(github.ref, 'refs/tags/') && '0' || '1' }}
+    ################################################################################
+    # Build
+    ################################################################################
+    - name: Build
+      run: sudo -E ./vagrant-box-libvirt-ubuntu
+      env:
+        RELEASE: ${{ matrix.release }}
