@@ -3,8 +3,8 @@ ENV['MIRROR_UBUNTU'] ||= 'http://archive.ubuntu.com/ubuntu'
 Vagrant.require_version '>= 2.2.19'
 Vagrant.configure('2') do |config|
   config.vagrant.plugins = ['vagrant-libvirt']
-  config.vm.box = 'ubuntu2004'
-  config.vm.box_url = 'file://./ubuntu-amd64-focal-libvirt.box'
+  config.vm.box = 'ubuntu2204'
+  config.vm.box_url = 'file://./ubuntu-amd64-jammy-libvirt.box'
   config.vm.provider :libvirt do |libvirt|
     libvirt.random :model => 'random'
     libvirt.storage_pool_name = 'ramdisk'

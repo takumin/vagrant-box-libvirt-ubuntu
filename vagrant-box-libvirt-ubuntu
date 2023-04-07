@@ -20,7 +20,7 @@ set -eu
 #   - focal
 #   - jammy
 # shellcheck disable=SC2086
-: ${RELEASE:='focal'}
+: ${RELEASE:='jammy'}
 
 # Kernel Package
 # Values:
