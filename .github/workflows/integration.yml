@@ -35,7 +35,7 @@ jobs:
     # Build Vagrant Box
     ################################################################################
     - name: Build Vagrant Box
-      run: sudo -E bash vagrant-box-libvirt-ubuntu
+      run: sudo -E bash -x vagrant-box-libvirt-ubuntu
       env:
         WORK_DIR: /opt/rootfs
         RELEASE: ${{ matrix.release }}
