@@ -11,83 +11,68 @@ set -eu
 # Value:
 #   - amd64
 #   - arm64
-# shellcheck disable=SC2086
-: ${ARCH:='amd64'}
+: "${ARCH:=amd64}"
 
 # Release Codename
 # Value:
 #   - bionic
 #   - focal
 #   - jammy
-# shellcheck disable=SC2086
-: ${RELEASE:='jammy'}
+: "${RELEASE:=jammy}"
 
 # Kernel Package
 # Values:
 #   - virtual
 #   - virtual-hwe
-# shellcheck disable=SC2086
-: ${KERNEL:='virtual'}
+: "${KERNEL:=virtual}"
 
 # User - Name
 # Values: String
-# shellcheck disable=SC2086
-: ${USER_NAME:='vagrant'}
+: "${USER_NAME:=vagrant}"
 
 # User - Password
 # Values: String
-# shellcheck disable=SC2086
-: ${USER_PASS:='vagrant'}
+: "${USER_PASS:=vagrant}"
 
 # User - Full Name
 # Values: String
-# shellcheck disable=SC2086
-: ${USER_FULL:='Vagrant User'}
+: "${USER_FULL:=Vagrant User}"
 
 # User - SSH Public Key
 # Values: String
-# shellcheck disable=SC2086
-: ${USER_KEYS:='ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key'}
+: "${USER_KEYS:=ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key}"
 
 # Apt Repository - Official
 # Values: String
-# shellcheck disable=SC2086
-: ${MIRROR_UBUNTU:='http://archive.ubuntu.com/ubuntu'}
+: "${MIRROR_UBUNTU:=http://archive.ubuntu.com/ubuntu}"
 
 # Proxy - No Proxy List
 # Values: String
-# shellcheck disable=SC2086
-: ${NO_PROXY:=''}
+: "${NO_PROXY:=}"
 
 # Proxy - FTP Proxy
 # Values: String
-# shellcheck disable=SC2086
-: ${FTP_PROXY:=''}
+: "${FTP_PROXY:=}"
 
 # Proxy - HTTP Proxy
 # Values: String
-# shellcheck disable=SC2086
-: ${HTTP_PROXY:=''}
+: "${HTTP_PROXY:=}"
 
 # Proxy - HTTPS Proxy
 # Values: String
-# shellcheck disable=SC2086
-: ${HTTPS_PROXY:=''}
+: "${HTTPS_PROXY:=}"
 
 # Proxy - Apt Proxy Host
 # Values: String
-# shellcheck disable=SC2086
-: ${APT_PROXY_HOST:=''}
+: "${APT_PROXY_HOST:=}"
 
 # Proxy - Apt Proxy Port
 # Values: String
-# shellcheck disable=SC2086
-: ${APT_PROXY_PORT:=''}
+: "${APT_PROXY_PORT:=}"
 
 # Working Directory
 # Values: String
-# shellcheck disable=SC2086
-: ${WORK_DIR:="/tmp/vagrant"}
+: "${WORK_DIR:=/tmp/vagrant}"
 
 ################################################################################
 # Available Environment
