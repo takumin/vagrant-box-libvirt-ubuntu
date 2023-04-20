@@ -208,7 +208,8 @@ case "${RELEASE}-${KERNEL}" in
 esac
 
 # User Password to SHA512 Hash
-USER_PASS_HASH="$(echo "${USER_PASS}" | openssl passwd -stdin -6 -salt "$(cat /dev/urandom | tr -dc 'A-Za-z0-9' | fold -w 8 | head -n 1)")"
+USER_PASS_RNG="$(dd bs=512 if=/dev/urandom count=1 2>/dev/null | LC_ALL=C tr -dc "a-zA-Z0-9@#*=[]" | head -c 10)"
+USER_PASS_HASH="$(echo "${USER_PASS}" | openssl passwd -stdin -6 -salt "${USER_PASS_RNG}")"
 
 ################################################################################
 # Initialize
