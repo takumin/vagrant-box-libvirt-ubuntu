@@ -30,7 +30,7 @@ jobs:
     - name: Required Packages
       run: |
         sudo apt-get update
-        sudo apt-get install -qq qemu gdisk dosfstools e2fsprogs xfsprogs pixz debootstrap
+        sudo apt-get install -qq qemu-utils gdisk dosfstools e2fsprogs xfsprogs pixz debootstrap
     ################################################################################
     # Build Vagrant Box
     ################################################################################
