@@ -219,7 +219,7 @@ USER_PASS_HASH="$(echo "${USER_PASS}" | openssl passwd -stdin -6 -salt "${USER_P
 lsmod | grep -qs nbd || modprobe nbd
 
 # Install Required Packages
-dpkg -l | awk '{print $2}' | grep -qs '^qemu$'        || apt-get -qq --no-install-recommends install qemu
+dpkg -l | awk '{print $2}' | grep -qs '^qemu$'        || apt-get -qq --no-install-recommends install qemu-utils
 dpkg -l | awk '{print $2}' | grep -qs '^gdisk$'       || apt-get -qq --no-install-recommends install gdisk
 dpkg -l | awk '{print $2}' | grep -qs '^dosfstools$'  || apt-get -qq --no-install-recommends install dosfstools
 dpkg -l | awk '{print $2}' | grep -qs '^e2fsprogs$'   || apt-get -qq --no-install-recommends install e2fsprogs
