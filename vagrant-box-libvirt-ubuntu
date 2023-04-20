@@ -591,9 +591,6 @@ chmod 1777 "${GRUB_DIR}/dev/shm"
 
 # Check Architecture
 if [ "${ARCH}" = 'amd64' ]; then
-	# Check Partition Probe
-	chroot "${GRUB_DIR}" grub-probe --device "${BLOCK_DEV}"
-
 	# Install BIOS Boot Recode
 	chroot "${GRUB_DIR}" grub-install --target=i386-pc --recheck "${BLOCK_DEV}"
 
