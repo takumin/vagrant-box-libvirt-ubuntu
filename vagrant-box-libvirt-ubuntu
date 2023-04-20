@@ -606,12 +606,18 @@ echo 'GRUB_DISABLE_OS_PROBER="true"' >> "${GRUB_DIR}/etc/default/grub"
 # Create Grub Config File
 chroot "${GRUB_DIR}" grub-mkconfig -o /boot/grub/grub.cfg
 
+# Sync Disk
+sync;sync;sync
+
 # Unmount Partition
 awk '{print $2}' /proc/mounts | grep -s "${TMPFS_DIR}" | sort -r | xargs --no-run-if-empty umount
 awk '{print $2}' /proc/mounts | grep -s "${GRUB_DIR}" | sort -r | xargs --no-run-if-empty umount
 
 # Disconnect Disk Image
 qemu-nbd -d "${BLOCK_DEV}" > /dev/null
+
+# Wait Disconnect
+sleep 1
 
 # Compressed Disk Image
 qemu-img convert -c -f qcow2 -O qcow2 "${WORK_DIR}/box.img" "${BUILD_DIR}/box.img"
