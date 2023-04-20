@@ -12,7 +12,7 @@ jobs:
   ci:
     strategy:
       matrix:
-        release: [jammy, focal, bionic]
+        release: [jammy, focal]
     timeout-minutes: 15
     name: CI
     runs-on: ubuntu-latest
