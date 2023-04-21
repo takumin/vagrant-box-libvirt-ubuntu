@@ -584,9 +584,11 @@ if [ "${ARCH}" = 'amd64' ]; then
 fi
 
 # Disable OS Prober
-echo '' >> "${GRUB_DIR}/etc/default/grub"
-echo '# Disable OS Prober' >> "${GRUB_DIR}/etc/default/grub"
-echo 'GRUB_DISABLE_OS_PROBER="true"' >> "${GRUB_DIR}/etc/default/grub"
+{
+	echo ''
+	echo '# Disable OS Prober'
+	echo 'GRUB_DISABLE_OS_PROBER="true"'
+} >> "${GRUB_DIR}/etc/default/grub"
 
 # Create Grub Config File
 chroot "${GRUB_DIR}" grub-mkconfig -o /boot/grub/grub.cfg
