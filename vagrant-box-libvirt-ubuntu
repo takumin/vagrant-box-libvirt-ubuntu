@@ -500,9 +500,6 @@ chroot "${TMPFS_DIR}" apt-get -qq install nfs-common nfs4-acl-tools
 # Require Package
 chroot "${TMPFS_DIR}" apt-get -qq install qemu-guest-agent
 
-# Enabled Service
-chroot "${TMPFS_DIR}" systemctl enable qemu-guest-agent.service
-
 ################################################################################
 # Boot
 ################################################################################
