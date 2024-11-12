@@ -1,13 +1,13 @@
 # vim: set ft=ruby :
-ENV['MIRROR_UBUNTU'] ||= 'http://archive.ubuntu.com/ubuntu'
-Vagrant.require_version '>= 2.2.19'
+ENV['MIRROR_UBUNTU_ARCHIVE'] ||= 'http://archive.ubuntu.com/ubuntu'
+ENV['MIRROR_UBUNTU_SECURITY'] ||= 'http://security.ubuntu.com/ubuntu'
+Vagrant.require_version '>= 2.4.1'
 Vagrant.configure('2') do |config|
   config.vagrant.plugins = ['vagrant-libvirt']
-  config.vm.box = 'ubuntu2204'
-  config.vm.box_url = 'file://./ubuntu-amd64-jammy-libvirt.box'
+  config.vm.box = 'ubuntu2404'
+  config.vm.box_url = 'file://./ubuntu-amd64-noble-libvirt.box'
   config.vm.provider :libvirt do |libvirt|
     libvirt.random :model => 'random'
-    libvirt.storage_pool_name = 'ramdisk'
     libvirt.graphics_type = 'spice'
     libvirt.graphics_ip = '0.0.0.0'
     libvirt.graphics_port = 5995
@@ -24,15 +24,18 @@ Vagrant.configure('2') do |config|
 # Get Codename
 . /etc/lsb-release
 # Apt Repository
-cat > /etc/apt/sources.list << __EOF__
-deb     #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}           main restricted universe multiverse
-deb-src #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}           main restricted universe multiverse
-deb     #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-updates   main restricted universe multiverse
-deb-src #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-updates   main restricted universe multiverse
-deb     #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-backports main restricted universe multiverse
-deb-src #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-backports main restricted universe multiverse
-deb     #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-security  main restricted universe multiverse
-deb-src #{ENV['MIRROR_UBUNTU']} ${DISTRIB_CODENAME}-security  main restricted universe multiverse
+cat > /etc/apt/sources.list.d/ubuntu.sources << __EOF__
+Types: deb
+URIs: #{ENV['MIRROR_UBUNTU_ARCHIVE']}
+Suites: ${DISTRIB_CODENAME} ${DISTRIB_CODENAME}-updates ${DISTRIB_CODENAME}-backports
+Components: main universe restricted multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+Types: deb
+URIs: #{ENV['MIRROR_UBUNTU_SECURITY']}
+Suites: ${DISTRIB_CODENAME}-security
+Components: main universe restricted multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 __EOF__
 # Apt Update
 apt-get -y update

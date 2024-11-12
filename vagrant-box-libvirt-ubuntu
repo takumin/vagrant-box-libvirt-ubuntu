@@ -15,10 +15,9 @@ set -eu
 
 # Release Codename
 # Value:
-#   - bionic
-#   - focal
 #   - jammy
-: "${RELEASE:=jammy}"
+#   - noble
+: "${RELEASE:=noble}"
 
 # Kernel Package
 # Values:
@@ -42,9 +41,13 @@ set -eu
 # Values: String
 : "${USER_KEYS:=ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key}"
 
-# Apt Repository - Official
+# Apt Repository - Official Archive
 # Values: String
-: "${MIRROR_UBUNTU:=http://archive.ubuntu.com/ubuntu}"
+: "${MIRROR_UBUNTU_ARCHIVE:=http://archive.ubuntu.com/ubuntu}"
+
+# Apt Repository - Official Security
+# Values: String
+: "${MIRROR_UBUNTU_SECURITY:=http://security.ubuntu.com/ubuntu}"
 
 # Proxy - No Proxy List
 # Values: String
@@ -86,9 +89,8 @@ declare -a AVAILABLE_ARCH=(
 
 # Release
 declare -a AVAILABLE_RELEASE=(
-	'bionic'
-	'focal'
 	'jammy'
+	'noble'
 )
 
 # Kernel
@@ -184,12 +186,9 @@ fi
 
 # Select Kernel Image Package
 case "${RELEASE}-${KERNEL}" in
-	"bionic-virtual"     ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
-	"focal-virtual"      ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
-	"jammy-virtual"      ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
-	"bionic-virtual-hwe" ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-18.04" ;;
-	"focal-virtual-hwe"  ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-20.04" ;;
-	"jammy-virtual-hwe"  ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-22.04" ;;
+	"jammy-virtual-hwe" ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-22.04" ;;
+	"noble-virtual-hwe" ) KERNEL_IMAGE_PACKAGE="linux-image-virtual-hwe-24.04" ;;
+	*                   ) KERNEL_IMAGE_PACKAGE="linux-image-virtual" ;;
 esac
 
 # User Password to SHA512 Hash
@@ -281,7 +280,7 @@ sync;sync;sync
 ################################################################################
 
 # Install Base System
-${DEBOOTSTRAP_COMMAND} "${RELEASE}" "${TMPFS_DIR}" "${MIRROR_UBUNTU}"
+${DEBOOTSTRAP_COMMAND} "${RELEASE}" "${TMPFS_DIR}" "${MIRROR_UBUNTU_ARCHIVE}"
 
 # Require Environment
 declare -x PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -322,9 +321,6 @@ echo 'force-unsafe-io' > "${TMPFS_DIR}/etc/dpkg/dpkg.cfg.d/02apt-speedup"
 # System
 ################################################################################
 
-# Default Hostname
-echo 'vagrant' > "${TMPFS_DIR}/etc/hostname"
-
 # Create FsTab
 cat > "${TMPFS_DIR}/etc/fstab" << __EOF__
 UUID=$(blkid -p -o value -s UUID ${BLOCK_DEV}p3) / xfs defaults 0 0
@@ -336,13 +332,22 @@ __EOF__
 # Repository
 ################################################################################
 
-# Official Repository
-cat > "${TMPFS_DIR}/etc/apt/sources.list" << __EOF__
-# Official Repository
-deb ${MIRROR_UBUNTU} ${RELEASE}           main restricted universe multiverse
-deb ${MIRROR_UBUNTU} ${RELEASE}-updates   main restricted universe multiverse
-deb ${MIRROR_UBUNTU} ${RELEASE}-backports main restricted universe multiverse
-deb ${MIRROR_UBUNTU} ${RELEASE}-security  main restricted universe multiverse
+# Remove Old Apt Sources
+rm -f "${TMPFS_DIR}/etc/apt/sources.list"
+
+# Mirror Official Repository
+cat > "${TMPFS_DIR}/etc/apt/sources.list.d/ubuntu.sources" << __EOF__
+Types: deb
+URIs: ${MIRROR_UBUNTU_ARCHIVE}
+Suites: ${RELEASE} ${RELEASE}-updates ${RELEASE}-backports
+Components: main universe restricted multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+Types: deb
+URIs: ${MIRROR_UBUNTU_SECURITY}
+Suites: ${RELEASE}-security
+Components: main universe restricted multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 __EOF__
 
 ################################################################################
@@ -444,7 +449,7 @@ __EOF__
 ################################################################################
 
 # Install Package
-chroot "${TMPFS_DIR}" apt-get -qq install nplan
+chroot "${TMPFS_DIR}" apt-get -qq install netplan.io
 
 # Enabled Systemd Networkd
 chroot "${TMPFS_DIR}" systemctl enable systemd-networkd.service
@@ -489,6 +494,16 @@ chroot "${TMPFS_DIR}" apt-get -qq install rsync
 chroot "${TMPFS_DIR}" apt-get -qq install nfs-common nfs4-acl-tools
 
 ################################################################################
+# Qemu
+################################################################################
+
+# Require Package
+chroot "${TMPFS_DIR}" apt-get -qq install qemu-guest-agent
+
+# Enabled Service
+chroot "${TMPFS_DIR}" systemctl enable qemu-guest-agent.service
+
+################################################################################
 # Boot
 ################################################################################
 
@@ -512,13 +527,19 @@ chroot "${TMPFS_DIR}" update-initramfs -c -k "${KERNEL_VERSION}"
 # Cleanup
 ################################################################################
 
-# Official Repository
-cat > "${TMPFS_DIR}/etc/apt/sources.list" << __EOF__
-# Official Repository
-deb http://archive.ubuntu.com/ubuntu ${RELEASE}           main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu ${RELEASE}-updates   main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu ${RELEASE}-backports main restricted universe multiverse
-deb http://archive.ubuntu.com/ubuntu ${RELEASE}-security  main restricted universe multiverse
+# Mirror Official Repository
+cat > "${TMPFS_DIR}/etc/apt/sources.list.d/ubuntu.sources" << __EOF__
+Types: deb
+URIs: http://archive.ubuntu.com/ubuntu
+Suites: ${RELEASE} ${RELEASE}-updates ${RELEASE}-backports
+Components: main universe restricted multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+Types: deb
+URIs: http://security.ubuntu.com/ubuntu
+Suites: ${RELEASE}-security
+Components: main universe restricted multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 __EOF__
 
 # Default Hostname
